@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Wednesday Night Racing</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b4fb3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="WNR">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+  :root{
+    --ink:#0b1220; --muted:#5b6472; --line:#d4d9e0; --bg:#ffffff; --panel:#f3f5f8;
+    --accent:#0b4fb3; --accent-ink:#ffffff; --cm:#c2330a; --ok:#0a6e3a; --warn:#b00020;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:var(--bg); color:var(--ink);
+       font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       font-size:18px; line-height:1.35;}
+  .wrap{max-width:760px; margin:0 auto; padding:14px 14px 60px;}
+  .appTitle{font-size:32px; font-weight:800; letter-spacing:.3px; color:var(--accent);}
+  .rule{border:none; border-top:2px solid var(--ink); margin:8px 0;}
+  .byline{font-size:17px; font-weight:700; color:var(--ink); letter-spacing:.4px;}
+  header h1{margin:14px 0 8px; font-size:22px; letter-spacing:.3px;}
+  .portnote{display:inline-block; background:var(--ink); color:#fff; font-weight:700;
+            padding:4px 10px; border-radius:6px; font-size:14px; letter-spacing:.4px;}
+  .step{margin-top:18px;}
+  .step h2{font-size:15px; text-transform:uppercase; letter-spacing:.8px;
+           color:var(--muted); margin:0 0 8px;}
+  .grid{display:grid; gap:8px;}
+  .grid.types{grid-template-columns:repeat(2,1fr);}
+  .grid.marks{grid-template-columns:repeat(4,1fr);}
+  .grid.laps{grid-template-columns:repeat(4,1fr);}
+  button.opt{appearance:none; border:2px solid var(--line); background:var(--panel);
+             border-radius:10px; padding:10px 8px; min-height:56px; cursor:pointer;
+             font-size:17px; font-weight:600; color:var(--ink); text-align:center;}
+  button.opt small{display:block; font-weight:500; font-size:13px; color:var(--muted); margin-top:2px;}
+  button.opt.sel{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+  button.opt.sel small{color:#cfe0ff;}
+  #lapStep{display:none;}
+  #result{display:none; margin-top:22px; border-top:3px solid var(--ink); padding-top:14px;}
+  .codeRow{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;}
+  #cCode{font-size:46px; font-weight:800; letter-spacing:1px; font-variant-numeric:tabular-nums;}
+  #cName{font-size:18px; color:var(--muted); font-weight:600;}
+  .facts{display:flex; gap:10px; flex-wrap:wrap; margin:8px 0 4px;}
+  .fact{background:var(--panel); border:1px solid var(--line); border-radius:8px;
+        padding:6px 12px; font-size:15px;}
+  .fact b{font-size:17px;}
+  .note{margin:8px 0; padding:8px 12px; border-left:4px solid var(--accent);
+        background:var(--panel); font-size:15px; border-radius:0 8px 8px 0;}
+  .note.dw{border-left-color:var(--cm); font-weight:600;}
+  .seq{margin:12px 0 4px; font-size:18px; font-weight:700; letter-spacing:.5px;
+       word-spacing:2px; line-height:1.7;}
+  .seq .cm{color:var(--cm);}
+  table{width:100%; border-collapse:collapse; margin-top:12px;}
+  th{font-size:13px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted);
+     text-align:left; padding:6px 8px; border-bottom:2px solid var(--ink);}
+  th.num, td.num{text-align:right;}
+  td{padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  td.leg{font-size:15px; color:var(--muted); width:44px;}
+  td.fromto{font-size:22px; font-weight:700; white-space:nowrap;}
+  td.fromto .arr{color:var(--muted); font-weight:400; padding:0 4px;}
+  td.fromto .cm{color:var(--cm);}
+  td.hdg{font-size:30px; font-weight:800; font-variant-numeric:tabular-nums;
+         white-space:nowrap; text-align:right;}
+  td.hdg small{font-size:15px; font-weight:600; color:var(--muted);}
+  td.dist{font-size:17px; color:var(--muted); text-align:right; white-space:nowrap;}
+  tr.lapline td{border-bottom:2px dashed var(--accent);}
+  .tag{display:block; font-size:12.5px; font-weight:700; letter-spacing:.3px; margin-top:2px;}
+  .tag.port{color:var(--accent);}
+  .tag.stbd{color:var(--ok);}
+  tfoot td{font-weight:800; font-size:18px; border-bottom:none; padding-top:12px;}
+  #diagram{margin-top:18px;}
+  #diagram svg{width:100%; height:auto; display:block; border:1px solid var(--line);
+               border-radius:10px; background:#fbfcfe;}
+  .toolbar{margin-top:16px; display:flex; gap:10px;}
+  .toolbar button{appearance:none; border:2px solid var(--ink); background:#fff; color:var(--ink);
+                  border-radius:8px; padding:10px 18px; font-size:16px; font-weight:700; cursor:pointer;}
+  #valErrors{display:none; background:#fdecea; border:2px solid var(--warn); color:var(--warn);
+             padding:10px 14px; border-radius:8px; margin-top:14px; font-size:15px; white-space:pre-line;}
+  footer{margin-top:26px; color:var(--muted); font-size:13px;}
+  @media print{
+    body{font-size:14px;}
+    .step,.toolbar,header .sub{display:none !important;}
+    #result{border-top:none; padding-top:0;}
+    td.hdg{font-size:22px;}
+    td.fromto{font-size:16px;}
+    #diagram svg{border:none; max-height:340px;}
+    .wrap{padding:0;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="appTitle">Wednesday Night Racing</div>
+    <hr class="rule">
+    <div class="byline">Created by Raju Venkatraman</div>
+    <hr class="rule">
+    <h1>Race Course Headings</h1>
+    <span class="portnote">ALL MARK ROUNDINGS TO PORT</span>
+  </header>
+
+  <div id="valErrors"></div>
+
+  <div class="step">
+    <h2>1 &middot; Course type</h2>
+    <div class="grid types" id="typeBtns"></div>
+  </div>
+
+  <div class="step">
+    <h2>2 &middot; First mark (wind direction)</h2>
+    <div class="grid marks" id="markBtns"></div>
+  </div>
+
+  <div class="step" id="lapStep">
+    <h2>3 &middot; Laps</h2>
+    <div class="grid laps" id="lapBtns"></div>
+  </div>
+
+  <div id="result">
+    <div class="codeRow"><span id="cCode"></span><span id="cName"></span></div>
+    <div class="facts" id="cFacts"></div>
+    <div id="cNotes"></div>
+    <div class="seq" id="cSeq"></div>
+    <table id="cTable">
+      <thead>
+        <tr><th>Leg</th><th>From &rarr; To</th><th class="num">Heading</th><th class="num">Dist&nbsp;nm</th></tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot></tfoot>
+    </table>
+    <div id="diagram"></div>
+    <div class="toolbar">
+      <button onclick="window.print()">Print / PDF</button>
+    </div>
+  </div>
+
+  <footer>
+    Headings are fixed values from the published course table (magnetic). Distances computed from
+    mark GPS positions and are approximate. Start between RC boat and CM; cross the line only when
+    starting or finishing. Pass CM to <b>port</b> between laps, to <b>starboard</b> to finish.
+  </footer>
+</div>
+
+<!--DATA_LOGIC_START-->
+<script>
+"use strict";
+/* ================= DATA (official — edit here if the club updates anything) ================= */
+
+function dm(d, m){ return d + m/60; }
+
+const MARKS = {
+  CM:{lat:dm(40,28.17), lon:-dm(74,12.39), name:"Center", dir:"Start/Finish"},
+  A: {lat:dm(40,28.78), lon:-dm(74,12.59), name:"North",     dir:"N"},
+  B: {lat:dm(40,28.71), lon:-dm(74,11.97), name:"Northeast", dir:"NE"},
+  C: {lat:dm(40,28.32), lon:-dm(74,11.59), name:"East",      dir:"E"},
+  D: {lat:dm(40,27.85), lon:-dm(74,11.69), name:"Southeast", dir:"SE"},
+  E: {lat:dm(40,27.56), lon:-dm(74,12.19), name:"South",     dir:"S"},
+  F: {lat:dm(40,27.63), lon:-dm(74,12.81), name:"Southwest", dir:"SW"},
+  G: {lat:dm(40,28.02), lon:-dm(74,13.19), name:"West",      dir:"W"},
+  H: {lat:dm(40,28.49), lon:-dm(74,13.09), name:"Northwest", dir:"NW"},
+};
+
+/* Magnetic headings, stored verbatim as strings from the official table
+   (note: the table uses both 360.0 and 000.0 for north — preserved as published). */
+const HEADINGS = {
+  CM:{A:"000.0",B:"045.0",C:"090.0",D:"135.0",E:"180.0",F:"225.0",G:"270.0",H:"315.0"},
+  A: {CM:"180.0",B:"112.5",C:"135.0",D:"157.5",E:"180.0",F:"202.5",G:"225.0",H:"247.5"},
+  B: {CM:"225.0",A:"292.5",C:"157.5",D:"180.0",E:"202.5",F:"225.0",G:"247.5",H:"270.0"},
+  C: {CM:"270.0",A:"315.0",B:"337.5",D:"202.5",E:"225.0",F:"247.5",G:"270.0",H:"292.5"},
+  D: {CM:"315.0",A:"337.5",B:"360.0",C:"022.5",E:"247.5",F:"270.0",G:"292.5",H:"315.0"},
+  E: {CM:"000.0",A:"000.0",B:"022.5",C:"045.0",D:"067.5",F:"292.5",G:"315.0",H:"337.5"},
+  F: {CM:"045.0",A:"022.5",B:"045.0",C:"067.5",D:"090.0",E:"112.5",G:"337.5",H:"360.0"},
+  G: {CM:"090.0",A:"045.0",B:"067.5",C:"090.0",D:"112.5",E:"135.0",F:"157.5",H:"022.5"},
+  H: {CM:"135.0",A:"067.5",B:"090.0",C:"112.5",D:"135.0",E:"157.5",F:"180.0",G:"202.5"},
+};
+
+/* Course families. `seq` is the per-lap mark sequence (CM excluded; CM is rounded
+   between laps — port — and at the finish — starboard). Lap-based families take 1–4 laps. */
+const FAMILIES = [
+  {code:"W", name:"Wind/Lee", dist:"2.5 nm / lap", laps:true,
+   seq:{A:["A","E"],B:["B","F"],C:["C","G"],D:["D","H"],
+        E:["E","A"],F:["F","B"],G:["G","C"],H:["H","D"]},
+   note:"You may pass on either side of the start/finish line during the race; cross it only when starting, preparing to start, or finishing."},
+  {code:"Z", name:"Trapezoid", dist:"3.1 nm / lap", laps:true,
+   seq:{A:["A","H","F","E"],B:["B","A","G","F"],C:["C","B","H","G"],D:["D","C","A","H"],
+        E:["E","D","B","A"],F:["F","E","C","B"],G:["G","F","D","C"],H:["H","G","E","D"]}},
+  {code:"O", name:"Modified Olympic", dist:"5.5 nm", laps:false,
+   seq:{A:["A","G","E","A","E"],B:["B","H","F","B","F"],C:["C","A","G","C","G"],D:["D","B","H","D","H"],
+        E:["E","C","A","E","A"],F:["F","D","B","F","B"],G:["G","E","C","G","C"],H:["H","F","D","H","D"]}},
+  {code:"T", name:"Modified Triangle", dist:"3.0 nm / lap", laps:true,
+   seq:{A:["A","G","E"],B:["B","H","F"],C:["C","A","G"],D:["D","B","H"],
+        E:["E","C","A"],F:["F","D","B"],G:["G","E","C"],H:["H","F","D"]}},
+  {code:"L", name:"Long Triangle", dist:"4.5 nm", laps:false, downwindFinish:true,
+   seq:{A:["A","F","D","A"],B:["B","G","E","B"],C:["C","H","F","C"],D:["D","A","G","D"],
+        E:["E","B","H","E"],F:["F","C","A","F"],G:["G","D","B","G"],H:["H","E","C","H"]}},
+  {code:"S", name:"Short W/L", dist:"1.25 nm", laps:false, downwindFinish:true,
+   seq:{A:["A"],B:["B"],C:["C"],D:["D"],E:["E"],F:["F"],G:["G"],H:["H"]}},
+];
+
+/* ================= PURE LOGIC ================= */
+
+const NM_R = 3440.065; // earth radius in nautical miles
+
+function distNm(p, q){
+  const toR = Math.PI/180;
+  const dLat = (q.lat-p.lat)*toR, dLon = (q.lon-p.lon)*toR;
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(p.lat*toR)*Math.cos(q.lat*toR)*Math.sin(dLon/2)**2;
+  return 2*NM_R*Math.asin(Math.sqrt(a));
+}
+
+/* Full mark sequence incl. CM roundings: CM, lap1..., CM, lap2..., CM, ... */
+function fullSequence(family, mark, laps){
+  const lap = family.seq[mark];
+  const n = family.laps ? laps : 1;
+  const out = ["CM"];
+  for(let i=0;i<n;i++){ out.push(...lap, "CM"); }
+  return out;
+}
+
+function courseCode(family, mark, laps){
+  return family.laps ? family.code + laps + mark : family.code + "-" + mark;
+}
+
+/* legs: [{from,to,heading,dist,toCM:'mid'|'finish'|null, lapStart:bool}] */
+function buildLegs(seqArr){
+  const legs = [];
+  for(let i=0;i<seqArr.length-1;i++){
+    const from = seqArr[i], to = seqArr[i+1];
+    const heading = (HEADINGS[from]||{})[to];
+    legs.push({
+      from, to, heading,
+      dist: distNm(MARKS[from], MARKS[to]),
+      toCM: to==="CM" ? (i+1===seqArr.length-1 ? "finish" : "mid") : null,
+    });
+  }
+  return legs;
+}
+
+/* Validate every base course + CM legs once at load. Returns array of error strings. */
+function validateAll(){
+  const errs = [];
+  for(const fam of FAMILIES){
+    for(const mark of Object.keys(fam.seq)){
+      const seqArr = fullSequence(fam, mark, fam.laps ? 2 : 1); // 2 laps exercises mid-CM legs
+      if(seqArr[0]!=="CM" || seqArr[seqArr.length-1]!=="CM")
+        errs.push(`${fam.code}-${mark}: does not start/end at CM`);
+      for(let i=0;i<seqArr.length-1;i++){
+        const a=seqArr[i], b=seqArr[i+1];
+        if(!MARKS[a]) errs.push(`${fam.code}-${mark}: unknown mark ${a}`);
+        if(!MARKS[b]) errs.push(`${fam.code}-${mark}: unknown mark ${b}`);
+        if(!(HEADINGS[a]&&HEADINGS[a][b]))
+          errs.push(`${fam.code}-${mark}: missing heading ${a} -> ${b}`);
+      }
+    }
+  }
+  return errs;
+}
+</script>
+<!--DATA_LOGIC_END-->
+
+<script>
+"use strict";
+/* ================= UI ================= */
+
+const state = { fam: FAMILIES[0], mark: "A", laps: 1 };
+
+const $ = (id)=>document.getElementById(id);
+
+function mkBtn(html, cls, onclick){
+  const b = document.createElement("button");
+  b.className = "opt "+(cls||"");
+  b.innerHTML = html;
+  b.addEventListener("click", onclick);
+  return b;
+}
+
+function buildPickers(){
+  const tb = $("typeBtns");
+  FAMILIES.forEach(f=>{
+    const b = mkBtn(`${f.code} &middot; ${f.name}<small>${f.dist}${f.downwindFinish?" &middot; downwind finish":""}</small>`,
+      "", ()=>{ state.fam=f; render(); });
+    b.dataset.code=f.code; tb.appendChild(b);
+  });
+  const mb = $("markBtns");
+  ["A","B","C","D","E","F","G","H"].forEach(m=>{
+    const b = mkBtn(`${m}<small>${MARKS[m].dir} wind</small>`, "", ()=>{ state.mark=m; render(); });
+    b.dataset.mark=m; mb.appendChild(b);
+  });
+  const lb = $("lapBtns");
+  [1,2,3,4].forEach(n=>{
+    const b = mkBtn(`${n}<small>lap${n>1?"s":""}</small>`, "", ()=>{ state.laps=n; render(); });
+    b.dataset.laps=n; lb.appendChild(b);
+  });
+}
+
+function fmtNm(x){ return x.toFixed(2); }
+
+function markHtml(m){ return m==="CM" ? '<span class="cm">CM</span>' : m; }
+
+function render(){
+  // selection highlights
+  document.querySelectorAll("#typeBtns .opt").forEach(b=>b.classList.toggle("sel", b.dataset.code===state.fam.code));
+  document.querySelectorAll("#markBtns .opt").forEach(b=>b.classList.toggle("sel", b.dataset.mark===state.mark));
+  document.querySelectorAll("#lapBtns .opt").forEach(b=>b.classList.toggle("sel", +b.dataset.laps===state.laps));
+  $("lapStep").style.display = state.fam.laps ? "block" : "none";
+
+  const fam = state.fam, mark = state.mark, laps = state.laps;
+  const seqArr = fullSequence(fam, mark, laps);
+  const legs = buildLegs(seqArr);
+  const total = legs.reduce((s,l)=>s+l.dist,0);
+  const code = courseCode(fam, mark, laps);
+
+  $("result").style.display = "block";
+  $("cCode").textContent = code;
+  $("cName").textContent = fam.name;
+
+  $("cFacts").innerHTML =
+    `<span class="fact">Wind <b>${MARKS[mark].dir}</b></span>`+
+    `<span class="fact">Published <b>${fam.dist}</b></span>`+
+    `<span class="fact">Computed <b>${fmtNm(total)} nm</b></span>`+
+    `<span class="fact">Legs <b>${legs.length}</b></span>`;
+
+  let notes = "";
+  if(fam.downwindFinish)
+    notes += `<div class="note dw">Finishes DOWNWIND &mdash; leave the start/finish mark to STARBOARD, committee boat to port.</div>`;
+  if(fam.note) notes += `<div class="note">${fam.note}</div>`;
+  if(fam.laps && laps>1)
+    notes += `<div class="note">${laps} laps &mdash; pass CM to <b>port</b> between laps; CM to <b>starboard</b> only at the finish.</div>`;
+  $("cNotes").innerHTML = notes;
+
+  $("cSeq").innerHTML = seqArr.map(markHtml).join(' <span style="color:var(--muted)">&rarr;</span> ');
+
+  // table
+  const tbody = $("cTable").querySelector("tbody");
+  tbody.innerHTML = "";
+  legs.forEach((l,i)=>{
+    const tr = document.createElement("tr");
+    let tag = "";
+    if(l.toCM==="mid") tag = `<span class="tag port">pass CM to PORT &rarr; lap ${Math.floor((i+1)/( (seqArr.length-1)/ (fam.laps?laps:1) ))+1}</span>`;
+    if(l.toCM==="finish") tag = `<span class="tag stbd">FINISH &mdash; CM to STARBOARD</span>`;
+    if(l.toCM==="mid") tr.className = "lapline";
+    tr.innerHTML =
+      `<td class="leg">${i+1}</td>`+
+      `<td class="fromto">${markHtml(l.from)}<span class="arr">&rarr;</span>${markHtml(l.to)}${tag}</td>`+
+      `<td class="hdg">${l.heading ?? "??"}&deg;<small>&nbsp;M</small></td>`+
+      `<td class="dist">${fmtNm(l.dist)}</td>`;
+    tbody.appendChild(tr);
+  });
+  $("cTable").querySelector("tfoot").innerHTML =
+    `<tr><td></td><td>Total</td><td></td><td class="num">${fmtNm(total)} nm</td></tr>`;
+
+  drawDiagram(seqArr);
+}
+
+/* ---------- SVG diagram (north up, to scale) ---------- */
+function drawDiagram(seqArr){
+  const W=420, H=420, PAD=46;
+  const lat0 = MARKS.CM.lat, k = Math.cos(lat0*Math.PI/180);
+  const pts = {};
+  let xs=[], ys=[];
+  for(const m of Object.keys(MARKS)){
+    const x = (MARKS[m].lon - MARKS.CM.lon)*60*k;   // nm east
+    const y = (MARKS[m].lat - MARKS.CM.lat)*60;     // nm north
+    pts[m]={x,y}; xs.push(x); ys.push(y);
+  }
+  const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  const sc = Math.min((W-2*PAD)/(maxX-minX), (H-2*PAD)/(maxY-minY));
+  const px = m => PAD + (pts[m].x-minX)*sc;
+  const py = m => H - PAD - (pts[m].y-minY)*sc;   // invert: north up
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+  // north arrow
+  s += `<g stroke="#0b1220" fill="#0b1220"><line x1="${W-26}" y1="44" x2="${W-26}" y2="18" stroke-width="2"/>
+        <path d="M${W-26},12 l-5,10 h10 z"/><text x="${W-26}" y="58" font-size="13" text-anchor="middle" font-weight="700">N</text></g>`;
+
+  // route with per-pair offset so repeated legs stay visible
+  const pairCount = {};
+  for(let i=0;i<seqArr.length-1;i++){
+    const a=seqArr[i], b=seqArr[i+1];
+    const key=[a,b].sort().join("-");
+    const idx=pairCount[key]||0; pairCount[key]=idx+1;
+    const off = idx===0 ? 0 : (idx%2===1?1:-1)*Math.ceil(idx/2)*7;
+    let x1=px(a), y1=py(a), x2=px(b), y2=py(b);
+    const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy)||1;
+    const ox=-dy/len*off, oy=dx/len*off;
+    // shorten ends so arrows don't sit on the mark circles
+    const t=14/len;
+    const sx1=x1+dx*t+ox, sy1=y1+dy*t+oy, sx2=x2-dx*t+ox, sy2=y2-dy*t+oy;
+    s += `<line x1="${sx1.toFixed(1)}" y1="${sy1.toFixed(1)}" x2="${sx2.toFixed(1)}" y2="${sy2.toFixed(1)}"
+          stroke="#0b4fb3" stroke-width="2.4"/>`;
+    // arrowhead drawn explicitly (iOS Safari lacks marker orient="auto-start-reverse")
+    const ang = Math.atan2(sy2-sy1, sx2-sx1), AL=9;
+    const w1 = ang + Math.PI - 0.45, w2 = ang + Math.PI + 0.45;
+    s += `<path d="M${sx2.toFixed(1)},${sy2.toFixed(1)} L${(sx2+AL*Math.cos(w1)).toFixed(1)},${(sy2+AL*Math.sin(w1)).toFixed(1)} L${(sx2+AL*Math.cos(w2)).toFixed(1)},${(sy2+AL*Math.sin(w2)).toFixed(1)} z" fill="#0b4fb3"/>`;
+    const mx=(sx1+sx2)/2+ox*0.4, my=(sy1+sy2)/2+oy*0.4;
+    s += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="9" fill="#fff" stroke="#0b4fb3" stroke-width="1.5"/>
+          <text x="${mx.toFixed(1)}" y="${(my+4).toFixed(1)}" font-size="11" font-weight="800" text-anchor="middle" fill="#0b4fb3">${i+1}</text>`;
+  }
+
+  // marks
+  for(const m of Object.keys(MARKS)){
+    const x=px(m), y=py(m), isCM=m==="CM";
+    s += `<circle cx="${x}" cy="${y}" r="${isCM?12:11}" fill="${isCM?"#c2330a":"#0b1220"}"/>`;
+    s += `<text x="${x}" y="${y+4.5}" font-size="${isCM?10:13}" font-weight="800" text-anchor="middle" fill="#fff">${m}</text>`;
+    if(!isCM) s += `<text x="${x}" y="${y-16}" font-size="11" text-anchor="middle" fill="#5b6472" font-weight="700">${MARKS[m].dir}</text>`;
+  }
+  s += `</svg>`;
+  $("diagram").innerHTML = s;
+}
+
+/* ---------- boot ---------- */
+const errs = validateAll();
+if(errs.length){
+  const box=$("valErrors");
+  box.style.display="block";
+  box.textContent="DATA ERRORS — fix before racing:\n"+errs.join("\n");
+}
+buildPickers();
+render();
+
+/* Offline support — only when served over http(s); no-op for file:// */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(()=>{ /* offline install can fail silently */ });
+}
+</script>
+</body>
+</html>
