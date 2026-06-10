@@ -21,6 +21,31 @@
        font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
        font-size:18px; line-height:1.35;}
   .wrap{max-width:900px; margin:0 auto;}
+  /* ---- splash / access gate ---- */
+  .splash{position:fixed; inset:0; z-index:100; background:linear-gradient(180deg,#0b1f3a 0%,#0b4fb3 100%);
+          display:flex; align-items:center; justify-content:center; padding:20px; overflow:auto;}
+  .splashCard{background:#fff; border-radius:18px; max-width:420px; width:100%; padding:22px 20px;
+              text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.4);}
+  .splashLogo{width:min(320px,80%); height:auto; margin:4px auto 6px;}
+  .splashClub{font-size:16px; font-weight:800; color:var(--ink); letter-spacing:.3px;}
+  .splashLoc{font-size:13px; color:var(--muted); margin-bottom:6px;}
+  .splash .appTitle{margin-top:6px;}
+  .splash .byline{margin-bottom:6px;}
+  .splashMsg{color:var(--accent); font-weight:700; font-size:14px; margin:4px 0;}
+  .splashMsg:empty{display:none;}
+  .gateBox{margin-top:8px; display:none;}
+  .gateBox label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.8px;
+                 color:var(--muted); margin-bottom:6px;}
+  .gateRow{display:flex; gap:8px; justify-content:center;}
+  .gateRow input{flex:1; max-width:220px; font-size:24px; font-weight:800; text-align:center;
+       letter-spacing:3px; text-transform:uppercase; padding:10px; border:2px solid var(--accent);
+       border-radius:10px;}
+  .gateRow button{appearance:none; border:none; background:var(--ok); color:#fff; font-size:18px;
+       font-weight:800; padding:10px 18px; border-radius:10px; cursor:pointer;}
+  .gateMsg{min-height:18px; margin-top:8px; font-size:14px; font-weight:700; color:var(--warn);}
+  .gateBusy{margin-top:8px; font-size:14px; color:var(--muted);}
+  .splashPriv{margin-top:14px; font-size:11.5px; color:var(--muted); line-height:1.4;}
+  body.unlocked .splash{display:none;}
   /* ---- swipeable pager ---- */
   .topbar{position:sticky; top:0; z-index:30; display:flex; align-items:center;
           justify-content:space-between; gap:10px; background:#fff;
@@ -201,6 +226,34 @@
 </style>
 </head>
 <body>
+
+<!-- ============ SPLASH / ACCESS GATE ============ -->
+<div id="splash" class="splash">
+  <div class="splashCard">
+    <img class="splashLogo" src="keyport-masthead.jpg" alt="Keyport Yacht Club burgee and name"
+         width="445" height="200">
+    <div class="splashClub">Keyport Yacht Club &middot; Est. 1908</div>
+    <div class="splashLoc">115 First Street, Keyport NJ &middot; Raritan Bay</div>
+    <hr class="rule">
+    <div class="appTitle">KYC Race Ready!</div>
+    <div class="byline">Created by Raju Venkatraman -&nbsp; 646.300.2466</div>
+    <hr class="rule">
+    <div id="splashMsg" class="splashMsg"></div>
+    <div id="gateBox" class="gateBox">
+      <label for="codeIn">Access code</label>
+      <div class="gateRow">
+        <input id="codeIn" type="text" autocomplete="off" autocapitalize="characters"
+               autocorrect="off" spellcheck="false" placeholder="enter code" inputmode="text">
+        <button id="gateBtn" type="button">Enter</button>
+      </div>
+      <div id="gateMsg" class="gateMsg"></div>
+    </div>
+    <div id="gateBusy" class="gateBusy">Loading…</div>
+    <div class="splashPriv">By entering you agree this app may record anonymous usage and,
+      while GPS is on, basic sailing data (speed, course, position) to help improve it.</div>
+  </div>
+</div>
+
 <div class="wrap">
 
   <div class="topbar">
@@ -255,7 +308,7 @@
         </table>
         <div id="diagram"></div>
         <div class="toolbar">
-          <button onclick="window.print()">Print / PDF</button>
+          <button onclick="track('print'); window.print();">Print / PDF</button>
           <button onclick="goPage(1)">Open live map &#9654;</button>
         </div>
       </div>
@@ -592,11 +645,14 @@ function render(){
   const code = courseCode(fam, mark, laps);
 
   // new course selected -> restart leg targeting and prefill the nominal wind
-  if(geo.seqArr.join() !== seqArr.join()){
+  const courseChanged = geo.seqArr.join() !== seqArr.join();
+  if(courseChanged){
     geo.seqArr = seqArr; geo.targetIdx = 1; geo.manual = false;
     geo.nominalWind = Math.round(bearingMag(MARKS.CM, MARKS[mark])) % 360; // wind ~ from windward mark
     $("windNom").textContent = String(geo.nominalWind).padStart(3,"0") + "°";
     if($("windIn").value === "") $("windIn").value = geo.nominalWind;
+    if(typeof AUTHORIZED !== "undefined" && AUTHORIZED)
+      track("course_select", { courseCode: code, detail: fam.code+"|laps="+laps+"|mark="+mark });
   }
 
   $("result").style.display = "block";
@@ -766,9 +822,10 @@ function toggleZoom(){
   b.innerHTML = geo.zoom ? "&#128269; Whole course" : "&#128269; Zoom to boat";
   if(geo.zoom && !geo.lastPos) setGpsStatus("Start GPS to center on your boat", "err");
   applyMapZoom();
+  track("zoom_toggle", { detail: geo.zoom ? "boat" : "course" });
 }
 
-function clearTrack(){ geo.track = []; drawBoatOverlay(); }
+function clearTrack(){ geo.track = []; drawBoatOverlay(); track("clear_track"); }
 
 /* wind helpers */
 function getWind(){
@@ -779,6 +836,7 @@ function useNominalWind(){
   if(geo.nominalWind == null) return;
   $("windIn").value = geo.nominalWind;
   updateGuide();
+  track("use_nominal", { detail: String(geo.nominalWind) });
 }
 
 /* ================= LIVE GPS ================= */
@@ -803,10 +861,29 @@ function toggleGps(){
   $("gpsBtn").classList.add("on");
   updateGuide();        // reveal next-mark panel
   goPage(1);            // jump to the live map page when GPS starts
+  // analytics: start a GPS session
+  geo.gpsStart = Date.now(); geo.maxSog = 0; geo.startTrackIdx = geo.track.length; geo.lastPing = 0;
+  track("gps_start", { courseCode: courseCode(state.fam, state.mark, state.laps) });
+}
+
+function gpsSessionSummary(){
+  const durationSec = geo.gpsStart ? Math.round((Date.now()-geo.gpsStart)/1000) : "";
+  let distanceNm = 0;
+  for(let i=(geo.startTrackIdx||0)+1; i<geo.track.length; i++) distanceNm += distNm(geo.track[i-1], geo.track[i]);
+  return {
+    durationSec,
+    distanceNm: distanceNm ? distanceNm.toFixed(3) : 0,
+    maxSog: geo.maxSog!=null ? geo.maxSog.toFixed(1) : "",
+    lat: geo.lastPos ? geo.lastPos.lat.toFixed(5) : "",
+    lon: geo.lastPos ? geo.lastPos.lon.toFixed(5) : ""
+  };
 }
 
 function stopGps(){
-  if(geo.watchId != null) navigator.geolocation.clearWatch(geo.watchId);
+  if(geo.watchId != null){
+    navigator.geolocation.clearWatch(geo.watchId);
+    track("gps_session", gpsSessionSummary());
+  }
   geo.watchId = null; geo.prev = null;
   $("gpsBtn").textContent = "Start GPS";
   $("gpsBtn").classList.remove("on");
@@ -818,6 +895,7 @@ function onGpsErr(e){
           : e.code===2 ? "Position unavailable (no fix yet)"
           : e.code===3 ? "GPS timed out — retrying…" : "GPS error";
   setGpsStatus(m, "err");
+  track("gps_error", { detail: "code="+e.code+" "+(e.message||"") });
 }
 
 function onPos(p){
@@ -848,10 +926,21 @@ function onPos(p){
   if(geo.track.length > 4000) geo.track.shift();
 
   geo.prev = cur; geo.lastPos = cur; geo.acc = c.accuracy;
+  if(geo.sogKt != null && (geo.maxSog == null || geo.sogKt > geo.maxSog)) geo.maxSog = geo.sogKt;
 
   updateLive();
   updateGuide();
   drawBoatOverlay();
+
+  // analytics: throttled live telemetry ping (every 60s while GPS is on)
+  const now = Date.now();
+  if(now - (geo.lastPing||0) > 60000){
+    geo.lastPing = now;
+    track("gps_ping", {
+      lat: cur.lat.toFixed(5), lon: cur.lon.toFixed(5), accuracy: geo.acc!=null?Math.round(geo.acc):"",
+      sog: geo.sogKt!=null?geo.sogKt.toFixed(1):"", cog: geo.cogTrue!=null?Math.round(trueToMag(geo.cogTrue)):""
+    });
+  }
 }
 
 function updateLive(){
@@ -948,8 +1037,167 @@ function stepLeg(d){
   updateGuide();
 }
 
+/* ================= ANALYTICS ================= */
+const APP_VERSION = "v6";
+const DEV_KEY = "kyc_device", SES_NS = "kyc";
+const SESSION_ID = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "s"+Date.now()+"-"+Math.random().toString(16).slice(2);
+let ENV = null;
+
+function deviceId(){
+  let d = localStorage.getItem(DEV_KEY);
+  if(!d){
+    d = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "d"+Date.now()+"-"+Math.random().toString(16).slice(2);
+    localStorage.setItem(DEV_KEY, d);
+  }
+  return d;
+}
+
+function detectBrowser(ua){
+  if(/Edg\//.test(ua)) return "Edge";
+  if(/OPR\/|Opera/.test(ua)) return "Opera";
+  if(/CriOS/.test(ua)) return "Chrome iOS";
+  if(/FxiOS/.test(ua)) return "Firefox iOS";
+  if(/Firefox\//.test(ua)) return "Firefox";
+  if(/Chrome\//.test(ua)) return "Chrome";
+  if(/Safari\//.test(ua)) return "Safari";
+  return "Other";
+}
+function detectOS(ua){
+  if(/iPhone|iPad|iPod/.test(ua)) return "iOS";
+  if(/Android/.test(ua)) return "Android";
+  if(/Windows/.test(ua)) return "Windows";
+  if(/Mac OS X/.test(ua)) return "macOS";
+  if(/Linux/.test(ua)) return "Linux";
+  return "Other";
+}
+function collectEnv(){
+  const ua = navigator.userAgent || "";
+  const phone = /Mobi|iPhone|iPod|Android.*Mobile/.test(ua);
+  const tablet = /iPad|Tablet|Android(?!.*Mobile)/.test(ua);
+  let net = "";
+  try{ net = (navigator.connection && navigator.connection.effectiveType) || ""; }catch(e){}
+  return {
+    browser: detectBrowser(ua),
+    os: detectOS(ua),
+    deviceType: phone ? "phone" : (tablet ? "tablet" : "desktop"),
+    screen: screen.width + "x" + screen.height,
+    viewport: window.innerWidth + "x" + window.innerHeight,
+    dpr: window.devicePixelRatio || 1,
+    lang: navigator.language || "",
+    tz: (function(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){ return ""; } })(),
+    network: net,
+    standalone: (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true,
+    cpu: navigator.hardwareConcurrency || "",
+    mem: navigator.deviceMemory || "",
+    appVersion: APP_VERSION
+  };
+}
+
+function track(event, fields){
+  try{
+    if(!ENV) ENV = collectEnv();
+    const payload = Object.assign({
+      clientTime: new Date().toISOString(),
+      deviceId: deviceId(),
+      sessionId: SESSION_ID,
+      event: event,
+      configVersion: (CONFIG && CONFIG.configVersion) || ""
+    }, ENV, fields || {});
+    sendEvent(payload);
+  }catch(e){ /* never let analytics break the app */ }
+}
+
+function sendEvent(payload){
+  const url = CONFIG && CONFIG.analyticsUrl;
+  if(!url) return;                       // analytics not configured -> silently no-op
+  try{
+    const body = JSON.stringify(payload);
+    const blob = new Blob([body], { type: "text/plain;charset=UTF-8" });
+    if(navigator.sendBeacon && navigator.sendBeacon(url, blob)) return;
+    fetch(url, { method:"POST", body: body, mode:"no-cors", keepalive:true,
+                 headers:{ "Content-Type":"text/plain;charset=UTF-8" } }).catch(()=>{});
+  }catch(e){}
+}
+
+// global error capture
+window.addEventListener("error", e=>track("error", { detail: (e.message||"")+" @"+(e.filename||"")+":"+(e.lineno||"") }));
+window.addEventListener("unhandledrejection", e=>track("error", { detail: "promise: "+(e.reason && e.reason.message || e.reason || "") }));
+
+/* ================= ACCESS GATE ================= */
+let CONFIG = null, AUTHORIZED = false;
+const AUTH_KEY = "kyc_auth", CFG_KEY = "kyc_cfg_cache";
+
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+const normCode = s => (s||"").trim().toUpperCase();
+
+async function loadConfig(){
+  try{
+    const r = await fetch("config.json?ts=" + Date.now(), { cache:"no-store" });
+    if(r.ok){ CONFIG = await r.json(); localStorage.setItem(CFG_KEY, JSON.stringify(CONFIG)); return true; }
+  }catch(e){}
+  try{ CONFIG = JSON.parse(localStorage.getItem(CFG_KEY) || "null"); }catch(e){ CONFIG = null; }
+  return false;   // offline / fetch failed -> CONFIG may be a cached copy
+}
+
+function showGate(msg){
+  $("gateBusy").style.display = "none";
+  $("gateBox").style.display = "block";
+  $("gateMsg").textContent = msg || "";
+  const inp = $("codeIn");
+  try{ inp.focus(); }catch(e){}
+}
+
+async function initGate(){
+  const online = await loadConfig();
+  if(CONFIG && CONFIG.message) $("splashMsg").textContent = CONFIG.message;
+  let stored = null;
+  try{ stored = JSON.parse(localStorage.getItem(AUTH_KEY) || "null"); }catch(e){}
+
+  if(online && CONFIG && Array.isArray(CONFIG.codes)){
+    if(stored && CONFIG.codes.includes(stored.hash)) return authorize("auto");
+    showGate(stored ? "Access code has changed — please enter the new code." : "");
+  } else if(!online){
+    if(stored && CONFIG && Array.isArray(CONFIG.codes) && CONFIG.codes.includes(stored.hash)) return authorize("offline");
+    if(stored && !CONFIG) return authorize("offline");   // offline, no cached config, but was validated before
+    showGate("Connect to the internet once to activate this app.");
+  } else {
+    showGate("Couldn't load access settings — check your connection and retry.");
+  }
+}
+
+async function submitCode(){
+  const code = normCode($("codeIn").value);
+  if(!code) return;
+  let ok = false;
+  try{
+    const h = await sha256Hex(code);
+    ok = !!(CONFIG && Array.isArray(CONFIG.codes) && CONFIG.codes.includes(h));
+    if(ok) localStorage.setItem(AUTH_KEY, JSON.stringify({ hash:h, ts:Date.now() }));
+  }catch(e){}
+  track("code_attempt", { detail: ok ? "pass" : "fail" });
+  if(ok){ authorize("entered"); }
+  else { $("gateMsg").textContent = "Incorrect code. Check with the race committee."; $("codeIn").value = ""; }
+}
+
+function authorize(via){
+  if(AUTHORIZED) return;
+  AUTHORIZED = true;
+  document.body.classList.add("unlocked");
+  track("app_open", { detail: via });
+  // analytics that depend on a selected course
+  const c = courseCode(state.fam, state.mark, state.laps);
+  track("course_select", { courseCode:c, detail:state.fam.code+"|laps="+state.laps+"|mark="+state.mark });
+}
+
 /* ---------- swipe pager nav ---------- */
-function setTab(i){ document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("sel", +t.dataset.pg===i)); }
+let lastPageTracked = -1;
+function setTab(i){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("sel", +t.dataset.pg===i));
+  if(AUTHORIZED && i !== lastPageTracked){ lastPageTracked = i; track("page_view", { detail: i===1 ? "map" : "course" }); }
+}
 function goPage(i){
   const p = $("pager");
   p.scrollTo({ left: i*p.clientWidth, behavior: "smooth" });
@@ -966,6 +1214,12 @@ function goPage(i){
 
 // recompute tactics live as the wind value is edited
 $("windIn").addEventListener("input", updateGuide);
+// log wind changes (on commit, not every keystroke)
+$("windIn").addEventListener("change", ()=>{ if(AUTHORIZED) track("wind_set", { detail: $("windIn").value }); });
+
+// gate controls
+$("gateBtn").addEventListener("click", submitCode);
+$("codeIn").addEventListener("keydown", e=>{ if(e.key==="Enter") submitCode(); });
 
 /* ---------- boot ---------- */
 const errs = validateAll();
@@ -976,6 +1230,7 @@ if(errs.length){
 }
 buildPickers();
 render();
+initGate();   // load remote config + run the access gate (splash stays until authorized)
 
 /* Offline support — only when served over http(s); no-op for file:// */
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
