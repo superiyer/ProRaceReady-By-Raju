@@ -207,7 +207,47 @@ function buildReports() {
   devRows.push(["", ""]); devRows.push(["— OS —", ""]); pushCounts_(devRows, byOS);
   writeTable_(ss, "Devices", ["Category", "Unique users"], devRows);
 
+  buildCharts_(ss);
+
   ss.toast("Reports refreshed — " + events.length + " events, " + uniqueUsers + " users.", "📊 KYC Reports", 6);
+}
+
+/* Embed charts on the Dashboard tab (rebuilt each refresh). */
+function buildCharts_(ss) {
+  var dash = ss.getSheetByName("Dashboard");
+  if (!dash) return;
+  var existing = dash.getCharts();
+  for (var i = 0; i < existing.length; i++) dash.removeChart(existing[i]);
+
+  // Sessions & unique users per day (column chart) — from "By Day" cols Date, Sessions, Unique users
+  var byDay = ss.getSheetByName("By Day");
+  if (byDay && byDay.getLastRow() >= 2) {
+    var rng = byDay.getRange(1, 1, byDay.getLastRow(), 3);
+    var ch1 = dash.newChart().asColumnChart()
+      .addRange(rng).setNumHeaders(1)
+      .setOption("title", "Sessions & unique users per day")
+      .setOption("legend", { position: "bottom" })
+      .setOption("colors", ["#0b4fb3", "#0a6e3a"])
+      .setOption("width", 540).setOption("height", 300)
+      .setPosition(2, 4, 12, 0)
+      .build();
+    dash.insertChart(ch1);
+  }
+
+  // Course popularity (bar chart) — from "Courses" cols Course, Times picked
+  var crs = ss.getSheetByName("Courses");
+  if (crs && crs.getLastRow() >= 2) {
+    var rng2 = crs.getRange(1, 1, crs.getLastRow(), 2);
+    var ch2 = dash.newChart().asBarChart()
+      .addRange(rng2).setNumHeaders(1)
+      .setOption("title", "Course popularity (times picked)")
+      .setOption("legend", { position: "none" })
+      .setOption("colors", ["#0b4fb3"])
+      .setOption("width", 540).setOption("height", 320)
+      .setPosition(19, 4, 12, 0)
+      .build();
+    dash.insertChart(ch2);
+  }
 }
 
 /* ---------- helpers ---------- */
