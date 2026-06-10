@@ -20,7 +20,38 @@
   body{margin:0; background:var(--bg); color:var(--ink);
        font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
        font-size:18px; line-height:1.35;}
-  .wrap{max-width:760px; margin:0 auto; padding:14px 14px 60px;}
+  .wrap{max-width:900px; margin:0 auto;}
+  /* ---- swipeable pager ---- */
+  .topbar{position:sticky; top:0; z-index:30; display:flex; align-items:center;
+          justify-content:space-between; gap:10px; background:#fff;
+          border-bottom:2px solid var(--ink); padding:8px 12px;}
+  .tabs{display:flex; gap:6px;}
+  .tab{appearance:none; border:2px solid var(--line); background:var(--panel); color:var(--ink);
+       border-radius:9px; padding:9px 16px; font-size:15px; font-weight:700; cursor:pointer;}
+  .tab.sel{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .topbar .gpsBtn{padding:9px 16px; min-height:42px; font-size:15px;}
+  .pager{display:flex; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
+         -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+  .pager::-webkit-scrollbar{display:none;}
+  .page{flex:0 0 100%; width:100%; scroll-snap-align:start;
+        height:calc(100dvh - 59px); overflow-y:auto; -webkit-overflow-scrolling:touch;
+        padding:14px 14px 60px;}
+  /* ---- map (live) page ---- */
+  .mapHead{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;}
+  .mapCourse{font-size:22px; font-weight:800; color:var(--accent); letter-spacing:.5px;}
+  .mapStats{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;}
+  .mapStats .stat{background:var(--ink); color:#fff; border-radius:14px; padding:10px 8px; text-align:center;}
+  .mapStats .stat .lbl{color:#9fb3d0;}
+  .mapStats .stat .val{font-size:clamp(40px,14vw,64px); color:#fff; line-height:1;}
+  .mapStats .stat .unit{color:#9fb3d0;}
+  .mapDiagram{max-width:560px; margin:10px auto;}
+  .mapDiagram svg{width:100%; height:auto; display:block; border:1px solid var(--line);
+                  border-radius:12px; background:#fbfcfe;}
+  .posbar{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:baseline; margin:8px 2px; font-size:15px;}
+  .posbar .poslbl{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted);}
+  .posbar #livePos{font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
+  .posbar #acc{color:var(--muted); font-size:13px;}
+  .maphint{margin-top:10px; color:var(--muted); font-size:13px;}
   .appTitle{font-size:32px; font-weight:800; letter-spacing:.3px; color:var(--accent);}
   .rule{border:none; border-top:2px solid var(--ink); margin:8px 0;}
   .byline{font-size:17px; font-weight:700; color:var(--ink); letter-spacing:.4px;}
@@ -128,9 +159,11 @@
   tr.activeLeg td{background:#eaf2ff;}
   tr.activeLeg td.fromto{box-shadow:inset 4px 0 0 var(--accent);}
   @media print{
-    #live{display:none !important;}
     body{font-size:14px;}
-    .step,.toolbar,header .sub{display:none !important;}
+    .topbar,.step,.toolbar,header .sub{display:none !important;}
+    .pager{display:block !important; overflow:visible !important;}
+    .page{height:auto !important; overflow:visible !important; padding:0 !important; flex:none !important;}
+    #pg1{display:none !important;}   /* live map is screen-only */
     #result{border-top:none; padding-top:0;}
     td.hdg{font-size:22px;}
     td.fromto{font-size:16px;}
@@ -141,50 +174,93 @@
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <div class="appTitle">Wednesday Night Racing</div>
-    <hr class="rule">
-    <div class="byline">Created by Raju Venkatraman</div>
-    <hr class="rule">
-    <h1>Race Course Headings</h1>
-    <span class="portnote">ALL MARK ROUNDINGS TO PORT</span>
-  </header>
 
-  <div id="valErrors"></div>
-
-  <div class="step">
-    <h2>1 &middot; Course type</h2>
-    <div class="grid types" id="typeBtns"></div>
+  <div class="topbar">
+    <div class="tabs">
+      <button class="tab sel" data-pg="0" onclick="goPage(0)">Course</button>
+      <button class="tab" data-pg="1" onclick="goPage(1)">Map &middot; Live</button>
+    </div>
+    <button id="gpsBtn" class="gpsBtn" onclick="toggleGps()">Start GPS</button>
   </div>
 
-  <div class="step" id="lapStep">
-    <h2>2 &middot; Laps</h2>
-    <div class="grid laps" id="lapBtns"></div>
-  </div>
+  <div class="pager" id="pager">
 
-  <div class="step">
-    <h2 id="markStepTitle">3 &middot; First mark (wind direction)</h2>
-    <div class="grid marks" id="markBtns"></div>
-  </div>
+    <!-- ============ PAGE 0 : COURSE ============ -->
+    <section class="page" id="pg0">
+      <header>
+        <div class="appTitle">Wednesday Night Racing</div>
+        <hr class="rule">
+        <div class="byline">Created by Raju Venkatraman</div>
+        <hr class="rule">
+        <h1>Race Course Headings</h1>
+        <span class="portnote">ALL MARK ROUNDINGS TO PORT</span>
+      </header>
 
-  <div id="result">
-    <div class="codeRow"><span id="cCode"></span><span id="cName"></span></div>
-    <div class="facts" id="cFacts"></div>
-    <div id="cNotes"></div>
+      <div id="valErrors"></div>
 
-    <div id="live">
-      <div class="liveBar">
-        <button id="gpsBtn" class="gpsBtn" onclick="toggleGps()">Start GPS</button>
+      <div class="step">
+        <h2>1 &middot; Course type</h2>
+        <div class="grid types" id="typeBtns"></div>
+      </div>
+
+      <div class="step" id="lapStep">
+        <h2>2 &middot; Laps</h2>
+        <div class="grid laps" id="lapBtns"></div>
+      </div>
+
+      <div class="step">
+        <h2 id="markStepTitle">3 &middot; First mark (wind direction)</h2>
+        <div class="grid marks" id="markBtns"></div>
+      </div>
+
+      <div id="result">
+        <div class="codeRow"><span id="cCode"></span><span id="cName"></span></div>
+        <div class="facts" id="cFacts"></div>
+        <div id="cNotes"></div>
+        <div class="seq" id="cSeq"></div>
+        <table id="cTable">
+          <thead>
+            <tr><th>Leg</th><th>From &rarr; To</th><th class="gap">Heading</th><th class="gap">Dist&nbsp;nm</th><th class="gap">To Position</th></tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+        <div id="diagram"></div>
+        <div class="toolbar">
+          <button onclick="window.print()">Print / PDF</button>
+          <button onclick="goPage(1)">Open live map &#9654;</button>
+        </div>
+      </div>
+
+      <footer>
+        <div class="raceRule">You may pass on either side of the start/finish line during the race;
+        cross it only when starting, preparing to start, or finishing.</div>
+        Headings are fixed values from the published course table (magnetic). Distances computed from
+        mark GPS positions and are approximate. Pass CM to <b>port</b> between laps, to
+        <b>starboard</b> to finish.
+        <br><br>
+        Live GPS shows speed over ground (SOG), course over ground (COG, magnetic), your position, and
+        next-mark guidance. SOG/COG can read &mdash; until the phone is moving, and phone GPS is jumpy at
+        low speed. GPS needs the app served over <b>https://</b> (the hosted version) and location
+        permission &mdash; it is blocked when opening the file directly.
+      </footer>
+    </section>
+
+    <!-- ============ PAGE 1 : MAP (LIVE) ============ -->
+    <section class="page" id="pg1">
+      <div class="mapHead">
+        <span id="mapCourse" class="mapCourse">&mdash;</span>
         <span id="gpsStatus" class="gpsStatus">GPS off</span>
       </div>
-      <div id="livePanel" class="livePanel" style="display:none">
-        <div class="stat"><div class="lbl">SOG</div><div class="val" id="sog">&mdash;</div><div class="unit">kt</div></div>
-        <div class="stat"><div class="lbl">COG</div><div class="val" id="cog">&mdash;</div><div class="unit">&deg;M</div></div>
-        <div class="stat wide"><div class="lbl">Position</div><div class="val pos" id="livePos">&mdash;</div><div class="unit" id="acc"></div></div>
+
+      <div class="mapStats">
+        <div class="stat"><div class="lbl">SOG</div><div class="val" id="sog">&mdash;</div><div class="unit">knots</div></div>
+        <div class="stat"><div class="lbl">COG</div><div class="val" id="cog">&mdash;</div><div class="unit">&deg; magnetic</div></div>
       </div>
-      <div id="guide" class="guide" style="display:none">
+
+      <div class="guide" id="guide">
         <div class="gHead">
-          <span class="gNext">Next: <b id="gMark">&mdash;</b></span>
+          <span class="gNext">Next mark: <b id="gMark">&mdash;</b></span>
           <span class="gLegBtns"><button onclick="stepLeg(-1)">&#9664; prev</button><button onclick="stepLeg(1)">next &#9654;</button></span>
         </div>
         <div class="gStats">
@@ -194,34 +270,19 @@
         </div>
         <div class="steer" id="steer">&mdash;</div>
       </div>
-    </div>
 
-    <div class="seq" id="cSeq"></div>
-    <table id="cTable">
-      <thead>
-        <tr><th>Leg</th><th>From &rarr; To</th><th class="gap">Heading</th><th class="gap">Dist&nbsp;nm</th><th class="gap">To Position</th></tr>
-      </thead>
-      <tbody></tbody>
-      <tfoot></tfoot>
-    </table>
-    <div id="diagram"></div>
-    <div class="toolbar">
-      <button onclick="window.print()">Print / PDF</button>
-    </div>
+      <div id="mapDiagram" class="mapDiagram"></div>
+
+      <div class="posbar">
+        <span class="poslbl">Position</span>
+        <span id="livePos">&mdash;</span>
+        <span id="acc"></span>
+      </div>
+      <div class="maphint">Boat shows as a green dot with a heading arrow; your track trails behind.
+      Swipe right or tap <b>Course</b> to return to the heading table.</div>
+    </section>
+
   </div>
-
-  <footer>
-    <div class="raceRule">You may pass on either side of the start/finish line during the race;
-    cross it only when starting, preparing to start, or finishing.</div>
-    Headings are fixed values from the published course table (magnetic). Distances computed from
-    mark GPS positions and are approximate. Pass CM to <b>port</b> between laps, to
-    <b>starboard</b> to finish.
-    <br><br>
-    Live GPS shows speed over ground (SOG), course over ground (COG, magnetic), your position, and
-    next-mark guidance. SOG/COG can read &mdash; until the phone is moving, and phone GPS is jumpy at
-    low speed. GPS needs the app served over <b>https://</b> (the hosted version) and location
-    permission &mdash; it is blocked when opening the file directly.
-  </footer>
 </div>
 
 <!--DATA_LOGIC_START-->
@@ -490,8 +551,10 @@ function render(){
   $("cTable").querySelector("tfoot").innerHTML =
     `<tr><td></td><td>Total</td><td></td><td class="gap">${fmtNm(total)} nm</td><td></td></tr>`;
 
-  drawDiagram(seqArr);
-  if(geo.watchId != null) updateGuide();   // refresh next-mark panel for the new course
+  drawDiagram(seqArr, "diagram");      // small diagram on the course page
+  drawDiagram(seqArr, "mapDiagram");   // large diagram on the live map page
+  $("mapCourse").textContent = code;
+  updateGuide();                       // refresh next-mark panel for the new course
 }
 
 /* ---------- SVG diagram (north up, to scale) ---------- */
@@ -505,7 +568,7 @@ function projXY(lat, lon){
   return { x: t.PAD + (x - t.minX)*t.sc, y: t.H - t.PAD - (y - t.minY)*t.sc };
 }
 
-function drawDiagram(seqArr){
+function drawDiagram(seqArr, targetId){
   const W=420, H=420, PAD=46;
   const lat0 = MARKS.CM.lat, k = Math.cos(lat0*Math.PI/180);
   const pts = {};
@@ -557,16 +620,17 @@ function drawDiagram(seqArr){
     s += `<text x="${x}" y="${y+4.5}" font-size="${isCM?10:13}" font-weight="800" text-anchor="middle" fill="#fff">${m}</text>`;
     if(!isCM) s += `<text x="${x}" y="${y-16}" font-size="11" text-anchor="middle" fill="#5b6472" font-weight="700">${MARKS[m].dir}</text>`;
   }
-  s += `<g id="boatLayer"></g>`;   // live position drawn here on each GPS tick
+  s += `<g class="boatLayer"></g>`;   // live position drawn here on each GPS tick
   s += `</svg>`;
-  $("diagram").innerHTML = s;
-  drawBoatOverlay();               // re-draw boat if GPS already running
+  $(targetId).innerHTML = s;
+  drawBoatOverlay();                  // re-draw boat if GPS already running
 }
 
-/* draw track trail + boat + COG arrow into the overlay layer, using saved transform */
+/* draw track trail + boat + COG arrow into EVERY diagram's overlay layer */
 function drawBoatOverlay(){
-  const layer = document.getElementById("boatLayer");
-  if(!layer || !diagramTx) return;
+  if(!diagramTx) return;
+  const layers = document.querySelectorAll(".boatLayer");
+  if(!layers.length) return;
   let s = "";
   const W = diagramTx.W;
   const clamp = (v)=>Math.max(5, Math.min(W-5, v));
@@ -589,7 +653,7 @@ function drawBoatOverlay(){
     s += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="7" fill="#0a6e3a" stroke="#fff" stroke-width="2.5"/>`;
     s += `<text class="boatlbl" x="${(cx+10).toFixed(1)}" y="${(cy-9).toFixed(1)}" fill="#0a6e3a">YOU</text>`;
   }
-  layer.innerHTML = s;
+  layers.forEach(l=>l.innerHTML = s);
 }
 
 /* ================= LIVE GPS ================= */
@@ -612,8 +676,8 @@ function toggleGps(){
   });
   $("gpsBtn").textContent = "Stop GPS";
   $("gpsBtn").classList.add("on");
-  $("livePanel").style.display = "grid";
-  if(geo.seqArr.length) $("guide").style.display = "block";
+  updateGuide();        // reveal next-mark panel
+  goPage(1);            // jump to the live map page when GPS starts
 }
 
 function stopGps(){
@@ -684,8 +748,8 @@ function fmtPos2(lat, lon){
 /* auto-advance through the course and fill the next-mark guidance panel */
 function updateGuide(){
   const seq = geo.seqArr;
-  if(!seq.length){ $("guide").style.display="none"; return; }
-  $("guide").style.display = geo.watchId!=null ? "block" : "none";
+  $("guide").style.display = seq.length ? "block" : "none";
+  if(!seq.length) return;
 
   // auto-detect rounding (unless the user has taken manual control)
   if(geo.lastPos && !geo.manual && geo.targetIdx < seq.length){
@@ -727,6 +791,22 @@ function stepLeg(d){
   geo.targetIdx = Math.max(1, Math.min(geo.seqArr.length-1, geo.targetIdx + d));
   updateGuide();
 }
+
+/* ---------- swipe pager nav ---------- */
+function setTab(i){ document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("sel", +t.dataset.pg===i)); }
+function goPage(i){
+  const p = $("pager");
+  p.scrollTo({ left: i*p.clientWidth, behavior: "smooth" });
+  setTab(i);
+}
+(function initPager(){
+  const p = $("pager");
+  let raf = null;
+  p.addEventListener("scroll", ()=>{
+    if(raf) return;
+    raf = requestAnimationFrame(()=>{ raf=null; setTab(Math.round(p.scrollLeft / p.clientWidth)); });
+  }, { passive:true });
+})();
 
 /* ---------- boot ---------- */
 const errs = validateAll();
