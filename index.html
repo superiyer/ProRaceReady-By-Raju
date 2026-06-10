@@ -55,7 +55,7 @@
   .seq{margin:12px 0 4px; font-size:18px; font-weight:700; letter-spacing:.5px;
        word-spacing:2px; line-height:1.7;}
   .seq .cm{color:var(--cm);}
-  table{width:100%; border-collapse:collapse; margin-top:12px;}
+  table{width:90%; border-collapse:collapse; margin-top:12px;}
   th{font-size:13px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted);
      text-align:left; padding:6px 8px; border-bottom:2px solid var(--ink);}
   th.num, td.num{text-align:right;}
@@ -64,13 +64,24 @@
   td.fromto{font-size:22px; font-weight:700; white-space:nowrap;}
   td.fromto .arr{color:var(--muted); font-weight:400; padding:0 4px;}
   td.fromto .cm{color:var(--cm);}
+  .gap{padding-left:34px !important;}
   td.hdg{font-size:30px; font-weight:800; font-variant-numeric:tabular-nums;
-         white-space:nowrap; text-align:right;}
+         white-space:nowrap; text-align:left;}
   td.hdg small{font-size:15px; font-weight:600; color:var(--muted);}
-  td.dist{font-size:17px; color:var(--muted); text-align:right; white-space:nowrap;}
+  td.dist{font-size:17px; color:var(--muted); text-align:left; white-space:nowrap;}
+  td.pos{font-size:14px; color:var(--muted); white-space:nowrap;
+         line-height:1.35; font-variant-numeric:tabular-nums;}
+  @media (max-width:480px){
+    .gap{padding-left:14px !important;}
+    td.fromto{font-size:19px;}
+    td.hdg{font-size:26px;}
+    td.pos{font-size:12.5px;}
+    td.dist{font-size:15px;}
+  }
   tr.lapline td{border-bottom:2px dashed var(--accent);}
   .tag{display:block; font-size:12.5px; font-weight:700; letter-spacing:.3px; margin-top:2px;}
   .tag.port{color:var(--accent);}
+  .tag.start{color:var(--ok);}
   .tag.stbd{color:var(--ok);}
   tfoot td{font-weight:800; font-size:18px; border-bottom:none; padding-top:12px;}
   #diagram{margin-top:18px;}
@@ -82,7 +93,42 @@
   #valErrors{display:none; background:#fdecea; border:2px solid var(--warn); color:var(--warn);
              padding:10px 14px; border-radius:8px; margin-top:14px; font-size:15px; white-space:pre-line;}
   footer{margin-top:26px; color:var(--muted); font-size:13px;}
+  .raceRule{color:var(--ink); font-size:15px; font-weight:600; border-top:2px solid var(--ink);
+            padding-top:10px; margin-bottom:8px;}
+  /* ---- live GPS ---- */
+  #live{margin:14px 0 4px;}
+  .liveBar{display:flex; align-items:center; gap:12px;}
+  .gpsBtn{appearance:none; border:2px solid var(--ok); background:var(--ok); color:#fff;
+          border-radius:9px; padding:11px 20px; font-size:17px; font-weight:800; cursor:pointer;
+          min-height:50px; letter-spacing:.3px;}
+  .gpsBtn.on{background:#fff; color:var(--warn); border-color:var(--warn);}
+  .gpsStatus{font-size:13.5px; color:var(--muted);}
+  .gpsStatus.err{color:var(--warn); font-weight:700;}
+  .gpsStatus.live{color:var(--ok); font-weight:700;}
+  .livePanel{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;}
+  .livePanel .stat,.guide .stat{background:var(--panel); border:1px solid var(--line);
+       border-radius:10px; padding:8px 12px; text-align:center;}
+  .livePanel .stat.wide{grid-column:1 / -1;}
+  .stat .lbl{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted);}
+  .stat .val{font-size:34px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.1;}
+  .stat .val.pos{font-size:17px; font-weight:700; padding:4px 0;}
+  .stat .unit{font-size:12px; color:var(--muted);}
+  .guide{margin-top:10px; border:2px solid var(--accent); border-radius:12px; padding:10px 12px;
+         background:#f1f6ff;}
+  .gHead{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .gNext{font-size:17px;} .gNext b{color:var(--accent); font-size:19px;}
+  .gLegBtns button{appearance:none; border:1.5px solid var(--accent); background:#fff; color:var(--accent);
+       border-radius:7px; padding:7px 11px; font-size:13px; font-weight:700; cursor:pointer; margin-left:6px;}
+  .gStats{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .gStats .val{font-size:26px;}
+  .steer{margin-top:10px; text-align:center; font-size:20px; font-weight:800; padding:8px;
+         border-radius:9px; background:#fff; border:1px solid var(--line);}
+  .steer.stbd{color:var(--ok);} .steer.port{color:var(--cm);} .steer.on{color:var(--ink);}
+  .boatlbl{font:700 11px -apple-system,"Segoe UI",sans-serif;}
+  tr.activeLeg td{background:#eaf2ff;}
+  tr.activeLeg td.fromto{box-shadow:inset 4px 0 0 var(--accent);}
   @media print{
+    #live{display:none !important;}
     body{font-size:14px;}
     .step,.toolbar,header .sub{display:none !important;}
     #result{border-top:none; padding-top:0;}
@@ -111,24 +157,49 @@
     <div class="grid types" id="typeBtns"></div>
   </div>
 
-  <div class="step">
-    <h2>2 &middot; First mark (wind direction)</h2>
-    <div class="grid marks" id="markBtns"></div>
+  <div class="step" id="lapStep">
+    <h2>2 &middot; Laps</h2>
+    <div class="grid laps" id="lapBtns"></div>
   </div>
 
-  <div class="step" id="lapStep">
-    <h2>3 &middot; Laps</h2>
-    <div class="grid laps" id="lapBtns"></div>
+  <div class="step">
+    <h2 id="markStepTitle">3 &middot; First mark (wind direction)</h2>
+    <div class="grid marks" id="markBtns"></div>
   </div>
 
   <div id="result">
     <div class="codeRow"><span id="cCode"></span><span id="cName"></span></div>
     <div class="facts" id="cFacts"></div>
     <div id="cNotes"></div>
+
+    <div id="live">
+      <div class="liveBar">
+        <button id="gpsBtn" class="gpsBtn" onclick="toggleGps()">Start GPS</button>
+        <span id="gpsStatus" class="gpsStatus">GPS off</span>
+      </div>
+      <div id="livePanel" class="livePanel" style="display:none">
+        <div class="stat"><div class="lbl">SOG</div><div class="val" id="sog">&mdash;</div><div class="unit">kt</div></div>
+        <div class="stat"><div class="lbl">COG</div><div class="val" id="cog">&mdash;</div><div class="unit">&deg;M</div></div>
+        <div class="stat wide"><div class="lbl">Position</div><div class="val pos" id="livePos">&mdash;</div><div class="unit" id="acc"></div></div>
+      </div>
+      <div id="guide" class="guide" style="display:none">
+        <div class="gHead">
+          <span class="gNext">Next: <b id="gMark">&mdash;</b></span>
+          <span class="gLegBtns"><button onclick="stepLeg(-1)">&#9664; prev</button><button onclick="stepLeg(1)">next &#9654;</button></span>
+        </div>
+        <div class="gStats">
+          <div class="stat"><div class="lbl">Brg to mark</div><div class="val" id="gBrg">&mdash;</div><div class="unit">&deg;M</div></div>
+          <div class="stat"><div class="lbl">Dist to go</div><div class="val" id="gDist">&mdash;</div><div class="unit">nm</div></div>
+          <div class="stat"><div class="lbl">Leg heading</div><div class="val" id="gLegHdg">&mdash;</div><div class="unit">&deg;M</div></div>
+        </div>
+        <div class="steer" id="steer">&mdash;</div>
+      </div>
+    </div>
+
     <div class="seq" id="cSeq"></div>
     <table id="cTable">
       <thead>
-        <tr><th>Leg</th><th>From &rarr; To</th><th class="num">Heading</th><th class="num">Dist&nbsp;nm</th></tr>
+        <tr><th>Leg</th><th>From &rarr; To</th><th class="gap">Heading</th><th class="gap">Dist&nbsp;nm</th><th class="gap">To Position</th></tr>
       </thead>
       <tbody></tbody>
       <tfoot></tfoot>
@@ -140,9 +211,16 @@
   </div>
 
   <footer>
+    <div class="raceRule">You may pass on either side of the start/finish line during the race;
+    cross it only when starting, preparing to start, or finishing.</div>
     Headings are fixed values from the published course table (magnetic). Distances computed from
-    mark GPS positions and are approximate. Start between RC boat and CM; cross the line only when
-    starting or finishing. Pass CM to <b>port</b> between laps, to <b>starboard</b> to finish.
+    mark GPS positions and are approximate. Pass CM to <b>port</b> between laps, to
+    <b>starboard</b> to finish.
+    <br><br>
+    Live GPS shows speed over ground (SOG), course over ground (COG, magnetic), your position, and
+    next-mark guidance. SOG/COG can read &mdash; until the phone is moving, and phone GPS is jumpy at
+    low speed. GPS needs the app served over <b>https://</b> (the hosted version) and location
+    permission &mdash; it is blocked when opening the file directly.
   </footer>
 </div>
 
@@ -184,8 +262,7 @@ const HEADINGS = {
 const FAMILIES = [
   {code:"W", name:"Wind/Lee", dist:"2.5 nm / lap", laps:true,
    seq:{A:["A","E"],B:["B","F"],C:["C","G"],D:["D","H"],
-        E:["E","A"],F:["F","B"],G:["G","C"],H:["H","D"]},
-   note:"You may pass on either side of the start/finish line during the race; cross it only when starting, preparing to start, or finishing."},
+        E:["E","A"],F:["F","B"],G:["G","C"],H:["H","D"]}},
   {code:"Z", name:"Trapezoid", dist:"3.1 nm / lap", laps:true,
    seq:{A:["A","H","F","E"],B:["B","A","G","F"],C:["C","B","H","G"],D:["D","C","A","H"],
         E:["E","D","B","A"],F:["F","E","C","B"],G:["G","F","D","C"],H:["H","G","E","D"]}},
@@ -213,6 +290,37 @@ function distNm(p, q){
             Math.cos(p.lat*toR)*Math.cos(q.lat*toR)*Math.sin(dLon/2)**2;
   return 2*NM_R*Math.asin(Math.sqrt(a));
 }
+
+/* Initial true bearing p -> q, degrees 0..360 (true north). */
+function trueBrg(p, q){
+  const toR = Math.PI/180;
+  const dLon = (q.lon-p.lon)*toR;
+  const y = Math.sin(dLon)*Math.cos(q.lat*toR);
+  const x = Math.cos(p.lat*toR)*Math.sin(q.lat*toR) -
+            Math.sin(p.lat*toR)*Math.cos(q.lat*toR)*Math.cos(dLon);
+  return (Math.atan2(y, x)*180/Math.PI + 360) % 360;
+}
+
+/* Magnetic variation derived from the data itself: circular mean of
+   (published magnetic heading - GPS-geometry true bearing) over all pairs.
+   Positive => magnetic reads higher than true (westerly variation).
+   Single source of truth — no hard-coded number to drift out of date. */
+const MAG_VAR = (function(){
+  let sx=0, sy=0;
+  for(const f of Object.keys(HEADINGS)) for(const t of Object.keys(HEADINGS[f])){
+    const d = (parseFloat(HEADINGS[f][t]) - trueBrg(MARKS[f], MARKS[t]))*Math.PI/180;
+    sx += Math.cos(d); sy += Math.sin(d);
+  }
+  return Math.atan2(sy, sx)*180/Math.PI;   // ~ +14.1
+})();
+
+function trueToMag(t){ return ((t + MAG_VAR) % 360 + 360) % 360; }
+function bearingMag(p, q){ return trueToMag(trueBrg(p, q)); }
+
+/* signed smallest angle a->b in (-180,180]; +ve means b is clockwise of a */
+function angleDiff(a, b){ return ((b - a + 540) % 360) - 180; }
+
+const MS_TO_KT = 1.94384;
 
 /* Full mark sequence incl. CM roundings: CM, lap1..., CM, lap2..., CM, ... */
 function fullSequence(family, mark, laps){
@@ -270,6 +378,13 @@ function validateAll(){
 
 const state = { fam: FAMILIES[0], mark: "A", laps: 1 };
 
+/* live GPS state */
+const geo = {
+  watchId: null, lastPos: null, prev: null, sogKt: null, cogTrue: null,
+  track: [], seqArr: [], targetIdx: 1, manual: false,
+};
+const ROUND_NM = 0.027;   // ~50 m: within this of the target mark => advance to next leg
+
 const $ = (id)=>document.getElementById(id);
 
 function mkBtn(html, cls, onclick){
@@ -301,6 +416,18 @@ function buildPickers(){
 
 function fmtNm(x){ return x.toFixed(2); }
 
+/* decimal degrees -> D°MM.MM' (matches the published mark table) */
+function fmtPos(m){
+  const p = MARKS[m];
+  const part = (v)=>{
+    const a = Math.abs(v), d = Math.floor(a);
+    return { d, min: ((a-d)*60).toFixed(2).padStart(5,"0") };
+  };
+  const la = part(p.lat), lo = part(p.lon);
+  return `${la.d}&deg;${la.min}&prime; ${p.lat>=0?"N":"S"}<br>`+
+         `${String(lo.d).padStart(3,"0")}&deg;${lo.min}&prime; ${p.lon<0?"W":"E"}`;
+}
+
 function markHtml(m){ return m==="CM" ? '<span class="cm">CM</span>' : m; }
 
 function render(){
@@ -309,12 +436,18 @@ function render(){
   document.querySelectorAll("#markBtns .opt").forEach(b=>b.classList.toggle("sel", b.dataset.mark===state.mark));
   document.querySelectorAll("#lapBtns .opt").forEach(b=>b.classList.toggle("sel", +b.dataset.laps===state.laps));
   $("lapStep").style.display = state.fam.laps ? "block" : "none";
+  $("markStepTitle").innerHTML = (state.fam.laps ? "3" : "2") + " &middot; First mark (wind direction)";
 
   const fam = state.fam, mark = state.mark, laps = state.laps;
   const seqArr = fullSequence(fam, mark, laps);
   const legs = buildLegs(seqArr);
   const total = legs.reduce((s,l)=>s+l.dist,0);
   const code = courseCode(fam, mark, laps);
+
+  // new course selected -> restart leg targeting from the first mark
+  if(geo.seqArr.join() !== seqArr.join()){
+    geo.seqArr = seqArr; geo.targetIdx = 1; geo.manual = false;
+  }
 
   $("result").style.display = "block";
   $("cCode").textContent = code;
@@ -342,23 +475,36 @@ function render(){
   legs.forEach((l,i)=>{
     const tr = document.createElement("tr");
     let tag = "";
+    if(i===0) tag = `<span class="tag start">START</span>`;
     if(l.toCM==="mid") tag = `<span class="tag port">pass CM to PORT &rarr; lap ${Math.floor((i+1)/( (seqArr.length-1)/ (fam.laps?laps:1) ))+1}</span>`;
-    if(l.toCM==="finish") tag = `<span class="tag stbd">FINISH &mdash; CM to STARBOARD</span>`;
+    if(l.toCM==="finish") tag = `<span class="tag stbd">FINISH</span>`;
     if(l.toCM==="mid") tr.className = "lapline";
     tr.innerHTML =
       `<td class="leg">${i+1}</td>`+
       `<td class="fromto">${markHtml(l.from)}<span class="arr">&rarr;</span>${markHtml(l.to)}${tag}</td>`+
-      `<td class="hdg">${l.heading ?? "??"}&deg;<small>&nbsp;M</small></td>`+
-      `<td class="dist">${fmtNm(l.dist)}</td>`;
+      `<td class="hdg gap">${l.heading ?? "??"}&deg;<small>&nbsp;M</small></td>`+
+      `<td class="dist gap">${fmtNm(l.dist)}</td>`+
+      `<td class="pos gap">${fmtPos(l.to)}</td>`;
     tbody.appendChild(tr);
   });
   $("cTable").querySelector("tfoot").innerHTML =
-    `<tr><td></td><td>Total</td><td></td><td class="num">${fmtNm(total)} nm</td></tr>`;
+    `<tr><td></td><td>Total</td><td></td><td class="gap">${fmtNm(total)} nm</td><td></td></tr>`;
 
   drawDiagram(seqArr);
+  if(geo.watchId != null) updateGuide();   // refresh next-mark panel for the new course
 }
 
 /* ---------- SVG diagram (north up, to scale) ---------- */
+let diagramTx = null;   // saved projection so the live boat overlay lines up exactly
+
+/* project any lat/lon to diagram px using the saved transform */
+function projXY(lat, lon){
+  const t = diagramTx;
+  const x = (lon - MARKS.CM.lon)*60*t.k;
+  const y = (lat - MARKS.CM.lat)*60;
+  return { x: t.PAD + (x - t.minX)*t.sc, y: t.H - t.PAD - (y - t.minY)*t.sc };
+}
+
 function drawDiagram(seqArr){
   const W=420, H=420, PAD=46;
   const lat0 = MARKS.CM.lat, k = Math.cos(lat0*Math.PI/180);
@@ -371,6 +517,7 @@ function drawDiagram(seqArr){
   }
   const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
   const sc = Math.min((W-2*PAD)/(maxX-minX), (H-2*PAD)/(maxY-minY));
+  diagramTx = { W, H, PAD, k, minX, minY, sc };
   const px = m => PAD + (pts[m].x-minX)*sc;
   const py = m => H - PAD - (pts[m].y-minY)*sc;   // invert: north up
 
@@ -410,8 +557,175 @@ function drawDiagram(seqArr){
     s += `<text x="${x}" y="${y+4.5}" font-size="${isCM?10:13}" font-weight="800" text-anchor="middle" fill="#fff">${m}</text>`;
     if(!isCM) s += `<text x="${x}" y="${y-16}" font-size="11" text-anchor="middle" fill="#5b6472" font-weight="700">${MARKS[m].dir}</text>`;
   }
+  s += `<g id="boatLayer"></g>`;   // live position drawn here on each GPS tick
   s += `</svg>`;
   $("diagram").innerHTML = s;
+  drawBoatOverlay();               // re-draw boat if GPS already running
+}
+
+/* draw track trail + boat + COG arrow into the overlay layer, using saved transform */
+function drawBoatOverlay(){
+  const layer = document.getElementById("boatLayer");
+  if(!layer || !diagramTx) return;
+  let s = "";
+  const W = diagramTx.W;
+  const clamp = (v)=>Math.max(5, Math.min(W-5, v));
+  // breadcrumb trail (this session only)
+  if(geo.track.length > 1){
+    const pts = geo.track.map(p=>{ const q=projXY(p.lat,p.lon); return `${clamp(q.x).toFixed(1)},${clamp(q.y).toFixed(1)}`; });
+    s += `<polyline points="${pts.join(" ")}" fill="none" stroke="#0a6e3a" stroke-width="2" stroke-opacity="0.55" stroke-linejoin="round"/>`;
+  }
+  if(geo.lastPos){
+    const q = projXY(geo.lastPos.lat, geo.lastPos.lon);
+    const cx = clamp(q.x), cy = clamp(q.y);
+    // COG arrow (magnetic shown, but drawn on a true-north canvas, so use true heading)
+    if(geo.cogTrue != null){
+      const ang = (geo.cogTrue-90)*Math.PI/180, L=26;
+      const ex = cx+L*Math.cos(ang), ey = cy+L*Math.sin(ang);
+      s += `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#0a6e3a" stroke-width="3"/>`;
+      const a1=ang+Math.PI-0.4, a2=ang+Math.PI+0.4, AL=9;
+      s += `<path d="M${ex.toFixed(1)},${ey.toFixed(1)} L${(ex+AL*Math.cos(a1)).toFixed(1)},${(ey+AL*Math.sin(a1)).toFixed(1)} L${(ex+AL*Math.cos(a2)).toFixed(1)},${(ey+AL*Math.sin(a2)).toFixed(1)} z" fill="#0a6e3a"/>`;
+    }
+    s += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="7" fill="#0a6e3a" stroke="#fff" stroke-width="2.5"/>`;
+    s += `<text class="boatlbl" x="${(cx+10).toFixed(1)}" y="${(cy-9).toFixed(1)}" fill="#0a6e3a">YOU</text>`;
+  }
+  layer.innerHTML = s;
+}
+
+/* ================= LIVE GPS ================= */
+
+function setGpsStatus(msg, cls){
+  const el = $("gpsStatus"); el.textContent = msg;
+  el.className = "gpsStatus" + (cls ? " "+cls : "");
+}
+
+function toggleGps(){
+  if(geo.watchId != null){ stopGps(); return; }
+  if(!("geolocation" in navigator)){ setGpsStatus("Geolocation not supported on this device","err"); return; }
+  // file:// and plain http often block geolocation on mobile; flag it clearly
+  if(location.protocol === "file:"){
+    setGpsStatus("Open via https:// (host it) — GPS is blocked on local files","err"); return;
+  }
+  setGpsStatus("Acquiring GPS…");
+  geo.watchId = navigator.geolocation.watchPosition(onPos, onGpsErr, {
+    enableHighAccuracy:true, maximumAge:1000, timeout:15000,
+  });
+  $("gpsBtn").textContent = "Stop GPS";
+  $("gpsBtn").classList.add("on");
+  $("livePanel").style.display = "grid";
+  if(geo.seqArr.length) $("guide").style.display = "block";
+}
+
+function stopGps(){
+  if(geo.watchId != null) navigator.geolocation.clearWatch(geo.watchId);
+  geo.watchId = null; geo.prev = null;
+  $("gpsBtn").textContent = "Start GPS";
+  $("gpsBtn").classList.remove("on");
+  setGpsStatus("GPS off");
+}
+
+function onGpsErr(e){
+  const m = e.code===1 ? "Location permission denied — allow it in your browser/site settings"
+          : e.code===2 ? "Position unavailable (no fix yet)"
+          : e.code===3 ? "GPS timed out — retrying…" : "GPS error";
+  setGpsStatus(m, "err");
+}
+
+function onPos(p){
+  const c = p.coords, t = p.timestamp;
+  const cur = { lat:c.latitude, lon:c.longitude, t };
+  setGpsStatus("GPS live", "live");
+
+  // --- SOG: prefer device speed (m/s); else derive from position delta ---
+  let sogMs = (c.speed != null && !isNaN(c.speed)) ? c.speed : null;
+  if(sogMs == null && geo.prev){
+    const dt = (t - geo.prev.t)/1000;
+    if(dt > 0) sogMs = distNm(geo.prev, cur)*1852 / dt;   // nm -> metres, per second
+  }
+  if(sogMs != null){
+    const kt = sogMs*MS_TO_KT;
+    geo.sogKt = geo.sogKt==null ? kt : geo.sogKt*0.6 + kt*0.4;   // light smoothing
+  }
+
+  // --- COG (true): prefer device heading; else derive when moving ---
+  let cogT = (c.heading != null && !isNaN(c.heading)) ? c.heading : null;
+  if(cogT == null && geo.prev && geo.sogKt != null && geo.sogKt > 0.5){
+    cogT = trueBrg(geo.prev, cur);
+  }
+  if(cogT != null) geo.cogTrue = cogT;
+
+  // record track (down-sample: only add if moved > ~3 m)
+  if(!geo.lastPos || distNm(geo.lastPos, cur)*1852 > 3) geo.track.push({lat:cur.lat, lon:cur.lon});
+  if(geo.track.length > 4000) geo.track.shift();
+
+  geo.prev = cur; geo.lastPos = cur; geo.acc = c.accuracy;
+
+  updateLive();
+  updateGuide();
+  drawBoatOverlay();
+}
+
+function updateLive(){
+  $("sog").innerHTML = geo.sogKt==null ? "&mdash;" : geo.sogKt.toFixed(1);
+  if(geo.cogTrue==null) $("cog").innerHTML = "&mdash;";
+  else $("cog").textContent = String(Math.round(trueToMag(geo.cogTrue))%360).padStart(3,"0");
+  if(geo.lastPos){
+    $("livePos").innerHTML = fmtPos2(geo.lastPos.lat, geo.lastPos.lon);
+    $("acc").textContent = geo.acc!=null ? "±"+Math.round(geo.acc)+" m" : "";
+  }
+}
+
+/* position formatter for arbitrary lat/lon (mirrors fmtPos for stored marks) */
+function fmtPos2(lat, lon){
+  const part = (v)=>{ const a=Math.abs(v), d=Math.floor(a); return d+"&deg;"+((a-d)*60).toFixed(2).padStart(5,"0")+"&prime;"; };
+  return `${part(lat)} ${lat>=0?"N":"S"} &nbsp; ${part(lon).replace(/^(\d+)/,m=>m.padStart(3,"0"))} ${lon<0?"W":"E"}`;
+}
+
+/* auto-advance through the course and fill the next-mark guidance panel */
+function updateGuide(){
+  const seq = geo.seqArr;
+  if(!seq.length){ $("guide").style.display="none"; return; }
+  $("guide").style.display = geo.watchId!=null ? "block" : "none";
+
+  // auto-detect rounding (unless the user has taken manual control)
+  if(geo.lastPos && !geo.manual && geo.targetIdx < seq.length){
+    const tgt = seq[geo.targetIdx];
+    if(distNm(geo.lastPos, MARKS[tgt]) < ROUND_NM && geo.targetIdx < seq.length-1) geo.targetIdx++;
+  }
+  highlightLeg();
+
+  if(geo.targetIdx >= seq.length){ $("gMark").textContent="Finished"; return; }
+  const tgt = seq[geo.targetIdx], prev = seq[geo.targetIdx-1];
+  const legHdg = (HEADINGS[prev]||{})[tgt];
+  $("gMark").innerHTML = (tgt==="CM"?'<span style="color:var(--cm)">CM (finish)</span>':tgt) + ` &middot; ${MARKS[tgt].dir}`;
+  $("gLegHdg").textContent = legHdg ?? "—";
+
+  if(geo.lastPos){
+    const brg = bearingMag(geo.lastPos, MARKS[tgt]);
+    const dnm = distNm(geo.lastPos, MARKS[tgt]);
+    $("gBrg").textContent = String(Math.round(brg)%360).padStart(3,"0");
+    $("gDist").textContent = dnm.toFixed(2);
+    // steer hint: compare COG to bearing-to-mark
+    const steer = $("steer");
+    if(geo.cogTrue==null){ steer.textContent="— (need motion for COG)"; steer.className="steer on"; }
+    else{
+      const d = angleDiff(trueToMag(geo.cogTrue), brg);
+      if(Math.abs(d) <= 5){ steer.innerHTML="&#9650; ON COURSE"; steer.className="steer on"; }
+      else if(d > 0){ steer.innerHTML=`&#9654; bear away / steer RIGHT ${Math.abs(Math.round(d))}&deg;`; steer.className="steer stbd"; }
+      else{ steer.innerHTML=`&#9664; head up / steer LEFT ${Math.abs(Math.round(d))}&deg;`; steer.className="steer port"; }
+    }
+  }
+}
+
+function highlightLeg(){
+  const rows = $("cTable").querySelectorAll("tbody tr");
+  rows.forEach((r,i)=>r.classList.toggle("activeLeg", i === geo.targetIdx-1));
+}
+
+function stepLeg(d){
+  geo.manual = true;
+  geo.targetIdx = Math.max(1, Math.min(geo.seqArr.length-1, geo.targetIdx + d));
+  updateGuide();
 }
 
 /* ---------- boot ---------- */

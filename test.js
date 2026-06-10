@@ -3,8 +3,9 @@ const fs = require("fs");
 const html = fs.readFileSync(__dirname + "/index.html", "utf8");
 const m = html.match(/<!--DATA_LOGIC_START-->\s*<script>([\s\S]*?)<\/script>\s*<!--DATA_LOGIC_END-->/);
 if (!m) { console.error("FAIL: data/logic block not found"); process.exit(1); }
-const { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll } =
-  new Function(m[1] + "\nreturn { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll };")();
+const { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll,
+        trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff } =
+  new Function(m[1] + "\nreturn { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll, trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff };")();
 
 let fails = 0;
 const check = (name, cond, detail) => {
@@ -30,15 +31,8 @@ for (const f of Object.keys(HEADINGS)) for (const t of Object.keys(HEADINGS[f]))
 }
 check("all reciprocals = 180 deg apart", recipBad.length === 0, recipBad.join("; "));
 
-// 4. Headings vs GPS geometry: stored heading should be within a few degrees of
-//    the true bearing computed from coordinates (circle is idealized; allow 6 deg)
-function trueBrg(p, q) {
-  const toR = Math.PI / 180;
-  const dLon = (q.lon - p.lon) * toR;
-  const y = Math.sin(dLon) * Math.cos(q.lat * toR);
-  const x = Math.cos(p.lat * toR) * Math.sin(q.lat * toR) - Math.sin(p.lat * toR) * Math.cos(q.lat * toR) * Math.cos(dLon);
-  return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
-}
+// 4. Headings vs GPS geometry, using the app's own trueBrg (imported above) so
+//    test and app share one implementation.
 // stored = magnetic, geometry = true; the difference IS the magnetic variation.
 // Check every pair shows the SAME variation (within tolerance), i.e. data is self-consistent.
 let devs = [];
@@ -92,6 +86,32 @@ for (const f of FAMILIES) for (const mk of Object.keys(f.seq)) {
   }
 }
 check("all course variants have complete heading tables", tblBad.length === 0, tblBad.slice(0, 5).join("; "));
+
+// 10. Geo math — derived magnetic variation is the westerly ~14 deg
+check(`MAG_VAR derived ~ +14 deg W (got ${MAG_VAR.toFixed(1)})`, Math.abs(MAG_VAR - 14.1) < 1.0);
+
+// 11. bearingMag(CM->mark) reproduces the published CM headings (within 1 deg)
+let bmBad = [];
+for (const mk of ["A","B","C","D","E","F","G","H"]) {
+  const got = bearingMag(MARKS.CM, MARKS[mk]);
+  const want = parseFloat(HEADINGS.CM[mk]);
+  let d = Math.abs(got - want); if (d > 180) d = 360 - d;
+  if (d > 1.0) bmBad.push(`CM->${mk} got ${got.toFixed(1)} want ${want}`);
+}
+check("bearingMag reproduces published CM headings", bmBad.length === 0, bmBad.join("; "));
+
+// 12. trueToMag is true + MAG_VAR mod 360
+check("trueToMag(350) wraps correctly",
+  Math.abs(trueToMag(350) - ((350 + MAG_VAR) % 360)) < 1e-9, String(trueToMag(350)));
+
+// 13. angleDiff sign + wrap
+check("angleDiff(350,10) = +20", Math.abs(angleDiff(350, 10) - 20) < 1e-9, String(angleDiff(350,10)));
+check("angleDiff(10,350) = -20", Math.abs(angleDiff(10, 350) + 20) < 1e-9, String(angleDiff(10,350)));
+check("angleDiff(0,180) = ±180", Math.abs(Math.abs(angleDiff(0, 180)) - 180) < 1e-9, String(angleDiff(0,180)));
+
+// 14. reciprocal magnetic bearings differ by ~180
+const rb = angleDiff(bearingMag(MARKS.CM, MARKS.A), bearingMag(MARKS.A, MARKS.CM));
+check("reciprocal bearingMag CM<->A ~180", Math.abs(Math.abs(rb) - 180) < 2, String(rb));
 
 console.log(fails ? `\n${fails} FAILURES` : "\nALL TESTS PASSED");
 process.exit(fails ? 1 : 0);
