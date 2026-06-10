@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Wednesday Night Racing</title>
+<title>KYC Race Ready!</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0b4fb3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="WNR">
+<meta name="apple-mobile-web-app-title" content="Race Ready">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <style>
@@ -37,7 +37,10 @@
         height:calc(100dvh - 59px); overflow-y:auto; -webkit-overflow-scrolling:touch;
         padding:14px 14px 60px;}
   /* ---- map (live) page ---- */
-  .mapHead{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;}
+  .mapBrand{margin-bottom:6px;}
+  .mapBrand .appTitle{font-size:24px;}
+  .mapBrand .byline{font-size:14px;}
+  .mapHead{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 0;}
   .mapCourse{font-size:22px; font-weight:800; color:var(--accent); letter-spacing:.5px;}
   .mapStats{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;}
   .mapStats .stat{background:var(--ink); color:#fff; border-radius:14px; padding:10px 8px; text-align:center;}
@@ -213,9 +216,9 @@
     <!-- ============ PAGE 0 : COURSE ============ -->
     <section class="page" id="pg0">
       <header>
-        <div class="appTitle">Wednesday Night Racing</div>
+        <div class="appTitle">KYC Race Ready!</div>
         <hr class="rule">
-        <div class="byline">Created by Raju Venkatraman</div>
+        <div class="byline">Created by Raju Venkatraman -&nbsp; 646.300.2466</div>
         <hr class="rule">
         <h1>Race Course Headings</h1>
         <span class="portnote">ALL MARK ROUNDINGS TO PORT</span>
@@ -273,6 +276,12 @@
 
     <!-- ============ PAGE 1 : MAP (LIVE) ============ -->
     <section class="page" id="pg1">
+      <header class="mapBrand">
+        <div class="appTitle">KYC Race Ready!</div>
+        <div class="byline">Created by Raju Venkatraman -&nbsp; 646.300.2466</div>
+      </header>
+      <hr class="rule">
+
       <div class="mapHead">
         <span id="mapCourse" class="mapCourse">&mdash;</span>
         <span id="gpsStatus" class="gpsStatus">GPS off</span>

@@ -1,7 +1,7 @@
 {
-  "name": "Wednesday Night Racing",
-  "short_name": "WNR",
-  "description": "Race course headings for Wednesday night racing — Olympic circle, marks A–H.",
+  "name": "KYC Race Ready!",
+  "short_name": "Race Ready",
+  "description": "KYC race course headings and live GPS racing aid — Olympic circle, marks A–H.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
