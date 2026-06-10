@@ -155,6 +155,31 @@
   .steer{margin-top:10px; text-align:center; font-size:20px; font-weight:800; padding:8px;
          border-radius:9px; background:#fff; border:1px solid var(--line);}
   .steer.stbd{color:var(--ok);} .steer.port{color:var(--cm);} .steer.on{color:var(--ink);}
+  /* wind input + tactics */
+  .windRow{display:flex; align-items:center; gap:8px; margin:10px 0 8px; flex-wrap:wrap;}
+  .windRow label{font-size:14px; font-weight:700; color:var(--ink);}
+  .windRow input{width:78px; font-size:22px; font-weight:800; text-align:center; padding:6px 4px;
+       border:2px solid var(--accent); border-radius:8px; font-variant-numeric:tabular-nums;}
+  .windRow .wu{font-size:14px; color:var(--muted);}
+  .windNomBtn{appearance:none; border:1.5px solid var(--line); background:#fff; color:var(--muted);
+       border-radius:7px; padding:6px 10px; font-size:12.5px; font-weight:700; cursor:pointer; margin-left:auto;}
+  .windNomBtn b{color:var(--accent);}
+  .tactics{margin-top:10px; padding:8px 12px; border-radius:9px; background:#fff; border:1px solid var(--line);}
+  .tactics .tacLine{font-size:16px; font-weight:800; margin-bottom:6px;}
+  .tactics .tacTacks{display:flex; gap:8px; flex-wrap:wrap;}
+  .tactics .tk{font-size:15px; font-weight:700; padding:5px 10px; border-radius:7px;
+       border:2px solid var(--line); background:var(--panel); color:var(--muted);}
+  .tactics .tk.fav{color:#fff;}
+  .tactics .tk.fav.stbd{background:var(--ok); border-color:var(--ok);}
+  .tactics .tk.fav.port{background:var(--cm); border-color:var(--cm);}
+  .tactics .tacLay{margin-top:8px; font-size:16px; font-weight:800; padding:7px 10px; border-radius:7px;
+       color:#fff; text-align:center;}
+  .tactics .tacLay.stbd{background:var(--ok);} .tactics .tacLay.port{background:var(--cm);}
+  .tactics .tacMuted{color:var(--muted); font-size:14px; font-weight:600;}
+  .mapCtrl{display:flex; gap:8px; margin:6px 2px 0;}
+  .mapCtrl button{appearance:none; border:2px solid var(--ink); background:#fff; color:var(--ink);
+       border-radius:8px; padding:9px 14px; font-size:14px; font-weight:700; cursor:pointer;}
+  .mapCtrl button.on{background:var(--accent); border-color:var(--accent); color:#fff;}
   .boatlbl{font:700 11px -apple-system,"Segoe UI",sans-serif;}
   tr.activeLeg td{background:#eaf2ff;}
   tr.activeLeg td.fromto{box-shadow:inset 4px 0 0 var(--accent);}
@@ -263,14 +288,25 @@
           <span class="gNext">Next mark: <b id="gMark">&mdash;</b></span>
           <span class="gLegBtns"><button onclick="stepLeg(-1)">&#9664; prev</button><button onclick="stepLeg(1)">next &#9654;</button></span>
         </div>
+        <div class="windRow">
+          <label for="windIn">Wind from</label>
+          <input id="windIn" type="number" inputmode="numeric" min="0" max="359" step="1" placeholder="&mdash;">
+          <span class="wu">&deg;M</span>
+          <button class="windNomBtn" onclick="useNominalWind()">use nominal <b id="windNom">&mdash;</b></button>
+        </div>
         <div class="gStats">
           <div class="stat"><div class="lbl">Brg to mark</div><div class="val" id="gBrg">&mdash;</div><div class="unit">&deg;M</div></div>
           <div class="stat"><div class="lbl">Dist to go</div><div class="val" id="gDist">&mdash;</div><div class="unit">nm</div></div>
           <div class="stat"><div class="lbl">Leg heading</div><div class="val" id="gLegHdg">&mdash;</div><div class="unit">&deg;M</div></div>
         </div>
+        <div class="tactics" id="tactics"></div>
         <div class="steer" id="steer">&mdash;</div>
       </div>
 
+      <div class="mapCtrl">
+        <button id="zoomBtn" onclick="toggleZoom()">&#128269; Zoom to boat</button>
+        <button onclick="clearTrack()">Clear track</button>
+      </div>
       <div id="mapDiagram" class="mapDiagram"></div>
 
       <div class="posbar">
@@ -383,6 +419,47 @@ function angleDiff(a, b){ return ((b - a + 540) % 360) - 180; }
 
 const MS_TO_KT = 1.94384;
 
+/* ---- wind / tactics ----
+   TWD = true wind DIRECTION (where wind blows FROM), degrees magnetic.
+   upwind = close-hauled angle off the wind; downwind = optimal run TWA.
+   These are boat-type defaults — tune here if your fleet points higher/lower. */
+const TAC = { upwind: 45, downwind: 150, layTol: 4 };
+const norm360 = a => ((a % 360) + 360) % 360;
+
+/* point of sail toward a mark given bearing-to-mark and wind direction.
+   TWA: 0 = dead upwind, 180 = dead downwind. */
+function computeTactics(brgMark, twd){
+  if(twd == null) return null;
+  const tol = TAC.layTol;
+  const twa = Math.abs(angleDiff(twd, brgMark));
+  const tackOf = h => angleDiff(h, twd) >= 0 ? "STBD" : "PORT"; // which side the wind is on
+
+  const chS = norm360(twd - TAC.upwind), chP = norm360(twd + TAC.upwind);  // close-hauled headings
+  const off = 180 - TAC.downwind;
+  const gA  = norm360(twd + 180 + off), gB = norm360(twd + 180 - off);     // broad-reach gybe headings
+
+  // pick the relevant pair (upwind half vs downwind half) and the favored / layline tack
+  const upwindSide = twa <= 90;
+  const cands = upwindSide ? [{h:chS, t:tackOf(chS)}, {h:chP, t:tackOf(chP)}]
+                           : [{h:gA,  t:tackOf(gA)},  {h:gB,  t:tackOf(gB)}];
+  const dA = Math.abs(angleDiff(brgMark, cands[0].h));
+  const dB = Math.abs(angleDiff(brgMark, cands[1].h));
+  const fav = dA <= dB ? cands[0] : cands[1];
+  // a layline is reached when the bearing to the mark lines up with a close-hauled / gybe heading
+  const layline = dA <= tol ? cands[0].t : (dB <= tol ? cands[1].t : null);
+
+  let mode, label, targetHdg, headings = [];
+  if(twa < TAC.upwind - tol){                  // below the laylines -> must tack
+    mode = "beat"; label = "BEAT (upwind)"; headings = cands; targetHdg = fav.h;
+  } else if(twa > TAC.downwind + tol){          // dead-downwind zone -> must gybe
+    mode = "run"; label = "RUN (downwind)"; headings = cands; targetHdg = fav.h;
+  } else {                                      // can sail straight at the mark
+    mode = "reach"; label = upwindSide ? "FETCH (close reach)" : "REACH";
+    targetHdg = brgMark; headings = layline ? cands : [];
+  }
+  return { mode, twa, label, headings, favored: fav.t, layline, targetHdg };
+}
+
 /* Full mark sequence incl. CM roundings: CM, lap1..., CM, lap2..., CM, ... */
 function fullSequence(family, mark, laps){
   const lap = family.seq[mark];
@@ -442,7 +519,7 @@ const state = { fam: FAMILIES[0], mark: "A", laps: 1 };
 /* live GPS state */
 const geo = {
   watchId: null, lastPos: null, prev: null, sogKt: null, cogTrue: null,
-  track: [], seqArr: [], targetIdx: 1, manual: false,
+  track: [], seqArr: [], targetIdx: 1, manual: false, zoom: false, nominalWind: null,
 };
 const ROUND_NM = 0.027;   // ~50 m: within this of the target mark => advance to next leg
 
@@ -505,9 +582,12 @@ function render(){
   const total = legs.reduce((s,l)=>s+l.dist,0);
   const code = courseCode(fam, mark, laps);
 
-  // new course selected -> restart leg targeting from the first mark
+  // new course selected -> restart leg targeting and prefill the nominal wind
   if(geo.seqArr.join() !== seqArr.join()){
     geo.seqArr = seqArr; geo.targetIdx = 1; geo.manual = false;
+    geo.nominalWind = Math.round(bearingMag(MARKS.CM, MARKS[mark])) % 360; // wind ~ from windward mark
+    $("windNom").textContent = String(geo.nominalWind).padStart(3,"0") + "°";
+    if($("windIn").value === "") $("windIn").value = geo.nominalWind;
   }
 
   $("result").style.display = "block";
@@ -654,6 +734,42 @@ function drawBoatOverlay(){
     s += `<text class="boatlbl" x="${(cx+10).toFixed(1)}" y="${(cy-9).toFixed(1)}" fill="#0a6e3a">YOU</text>`;
   }
   layers.forEach(l=>l.innerHTML = s);
+  applyMapZoom();
+}
+
+/* zoom/pan the live map's viewBox to follow the boat (map page only) */
+function applyMapZoom(){
+  const svg = document.querySelector("#mapDiagram svg");
+  if(!svg) return;
+  if(geo.zoom && geo.lastPos && diagramTx){
+    const q = projXY(geo.lastPos.lat, geo.lastPos.lon);
+    const Z = 75;   // half-window in viewBox units (~0.5 nm across)
+    svg.setAttribute("viewBox", `${(q.x-Z).toFixed(1)} ${(q.y-Z).toFixed(1)} ${2*Z} ${2*Z}`);
+  } else {
+    svg.setAttribute("viewBox", `0 0 ${diagramTx?diagramTx.W:420} ${diagramTx?diagramTx.H:420}`);
+  }
+}
+
+function toggleZoom(){
+  geo.zoom = !geo.zoom;
+  const b = $("zoomBtn");
+  b.classList.toggle("on", geo.zoom);
+  b.innerHTML = geo.zoom ? "&#128269; Whole course" : "&#128269; Zoom to boat";
+  if(geo.zoom && !geo.lastPos) setGpsStatus("Start GPS to center on your boat", "err");
+  applyMapZoom();
+}
+
+function clearTrack(){ geo.track = []; drawBoatOverlay(); }
+
+/* wind helpers */
+function getWind(){
+  const v = parseFloat($("windIn").value);
+  return isNaN(v) ? null : norm360(v);
+}
+function useNominalWind(){
+  if(geo.nominalWind == null) return;
+  $("windIn").value = geo.nominalWind;
+  updateGuide();
 }
 
 /* ================= LIVE GPS ================= */
@@ -764,21 +880,52 @@ function updateGuide(){
   $("gMark").innerHTML = (tgt==="CM"?'<span style="color:var(--cm)">CM (finish)</span>':tgt) + ` &middot; ${MARKS[tgt].dir}`;
   $("gLegHdg").textContent = legHdg ?? "—";
 
+  // bearing/distance to mark need a GPS fix; before that, use the published leg heading
+  let brg = null;
   if(geo.lastPos){
-    const brg = bearingMag(geo.lastPos, MARKS[tgt]);
-    const dnm = distNm(geo.lastPos, MARKS[tgt]);
+    brg = bearingMag(geo.lastPos, MARKS[tgt]);
     $("gBrg").textContent = String(Math.round(brg)%360).padStart(3,"0");
-    $("gDist").textContent = dnm.toFixed(2);
-    // steer hint: compare COG to bearing-to-mark
-    const steer = $("steer");
-    if(geo.cogTrue==null){ steer.textContent="— (need motion for COG)"; steer.className="steer on"; }
-    else{
-      const d = angleDiff(trueToMag(geo.cogTrue), brg);
-      if(Math.abs(d) <= 5){ steer.innerHTML="&#9650; ON COURSE"; steer.className="steer on"; }
-      else if(d > 0){ steer.innerHTML=`&#9654; bear away / steer RIGHT ${Math.abs(Math.round(d))}&deg;`; steer.className="steer stbd"; }
-      else{ steer.innerHTML=`&#9664; head up / steer LEFT ${Math.abs(Math.round(d))}&deg;`; steer.className="steer port"; }
-    }
+    $("gDist").textContent = distNm(geo.lastPos, MARKS[tgt]).toFixed(2);
+  } else {
+    $("gBrg").innerHTML = "&mdash;"; $("gDist").innerHTML = "&mdash;";
   }
+
+  const twd = getWind();
+  const brgForTac = brg != null ? brg : (legHdg != null ? parseFloat(legHdg) : null);
+  const tac = (twd != null && brgForTac != null) ? computeTactics(brgForTac, twd) : null;
+  renderTactics(tac, tgt);
+  renderSteer(tac, brg);
+}
+
+function hdg3(h){ return String(Math.round(h) % 360).padStart(3, "0"); }
+
+function renderTactics(tac, tgt){
+  const el = $("tactics");
+  if(!tac){ el.innerHTML = `<span class="tacMuted">Enter wind direction above for point-of-sail, tack/gybe headings and layline calls.</span>`; return; }
+  let h = `<div class="tacLine">${tac.label} &middot; TWA ${Math.round(tac.twa)}&deg;</div>`;
+  if(tac.mode === "reach"){
+    h += `<span class="tacMuted">Can sail straight to the mark &mdash; steer ${hdg3(tac.targetHdg)}&deg;M.</span>`;
+  } else {
+    h += `<div class="tacTacks">` + tac.headings.map(c=>
+      `<span class="tk ${c.t===tac.favored?"fav":""} ${c.t.toLowerCase()}">${c.t} ${hdg3(c.h)}&deg;M</span>`).join("") + `</div>`;
+    const word = tac.mode === "beat" ? "LAYLINE" : "GYBE LAYLINE";
+    const verb = tac.mode === "beat" ? "lays" : "gybe lays";
+    if(tac.layline)
+      h += `<div class="tacLay ${tac.layline.toLowerCase()}">ON ${tac.layline} ${word} &mdash; ${tac.layline} tack ${verb} ${tgt}</div>`;
+  }
+  el.innerHTML = h;
+}
+
+function renderSteer(tac, brg){
+  const steer = $("steer");
+  const targetHdg = tac ? tac.targetHdg : brg;
+  if(targetHdg == null){ steer.innerHTML = "&mdash;"; steer.className = "steer on"; return; }
+  if(geo.cogTrue == null){ steer.innerHTML = "&mdash; (need motion for COG)"; steer.className = "steer on"; return; }
+  const d = angleDiff(trueToMag(geo.cogTrue), targetHdg);
+  const tgt = hdg3(targetHdg) + "&deg;M";
+  if(Math.abs(d) <= 5){ steer.innerHTML = `&#9650; ON COURSE &mdash; hold ${tgt}`; steer.className = "steer on"; }
+  else if(d > 0){ steer.innerHTML = `&#9654; steer RIGHT ${Math.abs(Math.round(d))}&deg; &rarr; ${tgt}`; steer.className = "steer stbd"; }
+  else { steer.innerHTML = `&#9664; steer LEFT ${Math.abs(Math.round(d))}&deg; &rarr; ${tgt}`; steer.className = "steer port"; }
 }
 
 function highlightLeg(){
@@ -807,6 +954,9 @@ function goPage(i){
     raf = requestAnimationFrame(()=>{ raf=null; setTab(Math.round(p.scrollLeft / p.clientWidth)); });
   }, { passive:true });
 })();
+
+// recompute tactics live as the wind value is edited
+$("windIn").addEventListener("input", updateGuide);
 
 /* ---------- boot ---------- */
 const errs = validateAll();

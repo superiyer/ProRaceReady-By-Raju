@@ -1,5 +1,5 @@
 /* Wednesday Night Racing — offline cache. Bump CACHE version when files change. */
-const CACHE = "wnr-v3";
+const CACHE = "wnr-v4";
 const ASSETS = [
   "./",
   "./index.html",

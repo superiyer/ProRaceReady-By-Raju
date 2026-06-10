@@ -4,8 +4,8 @@ const html = fs.readFileSync(__dirname + "/index.html", "utf8");
 const m = html.match(/<!--DATA_LOGIC_START-->\s*<script>([\s\S]*?)<\/script>\s*<!--DATA_LOGIC_END-->/);
 if (!m) { console.error("FAIL: data/logic block not found"); process.exit(1); }
 const { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll,
-        trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff } =
-  new Function(m[1] + "\nreturn { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll, trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff };")();
+        trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff, TAC, computeTactics } =
+  new Function(m[1] + "\nreturn { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll, trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff, TAC, computeTactics };")();
 
 let fails = 0;
 const check = (name, cond, detail) => {
@@ -112,6 +112,34 @@ check("angleDiff(0,180) = ±180", Math.abs(Math.abs(angleDiff(0, 180)) - 180) < 
 // 14. reciprocal magnetic bearings differ by ~180
 const rb = angleDiff(bearingMag(MARKS.CM, MARKS.A), bearingMag(MARKS.A, MARKS.CM));
 check("reciprocal bearingMag CM<->A ~180", Math.abs(Math.abs(rb) - 180) < 2, String(rb));
+
+// 15. Tactics — point of sail classification (wind from North = 000)
+check("dead upwind => beat", computeTactics(0, 0).mode === "beat", computeTactics(0,0).mode);
+check("dead downwind => run", computeTactics(180, 0).mode === "run", computeTactics(180,0).mode);
+check("beam-on => reach", computeTactics(90, 0).mode === "reach", computeTactics(90,0).mode);
+
+// 16. Close-hauled headings & tack labels (wind 000, upwind 45)
+{
+  const t = computeTactics(10, 0); // a beat toward ~N
+  const hs = t.headings.map(c => `${c.t}:${Math.round(c.h)}`).sort().join(",");
+  check("beat offers STBD 315 + PORT 045", hs === "PORT:45,STBD:315", hs);
+  check("favored tack is the one closer to the mark bearing",
+    t.favored === "PORT", t.favored); // brg 010 is closer to 045 (PORT) than 315 (STBD)
+}
+
+// 17. Layline detection: bearing to mark aligned with a close-hauled heading
+{
+  // wind 000 -> starboard close-hauled heading = 315; a mark bearing 315 is on the STBD layline
+  const t = computeTactics(315, 0);
+  check("mark at close-hauled bearing flags a layline", t.layline === "STBD", String(t.layline));
+}
+check("no layline when well below it", computeTactics(10, 0).layline === null, String(computeTactics(10,0).layline));
+
+// 18. Reciprocal wind: same geometry, wind from South (180) flips beat/run
+check("wind from S: mark to N is a run", computeTactics(0, 180).mode === "run", computeTactics(0,180).mode);
+
+// 19. null wind => no tactics
+check("null wind returns null tactics", computeTactics(90, null) === null);
 
 console.log(fails ? `\n${fails} FAILURES` : "\nALL TESTS PASSED");
 process.exit(fails ? 1 : 0);
