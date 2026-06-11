@@ -217,14 +217,20 @@
     .brandLogo{height:58px; width:58px;}
     .brand{gap:11px;}
   }
-  /* Tablet / desktop landscape (e.g. iPad landscape): show Course and Map side-by-side
+  /* Tablet / desktop LANDSCAPE (e.g. iPad landscape): show Course and Map side-by-side
      instead of swiping. Each column scrolls independently. */
-  @media (min-width:900px) and (min-height:680px){
+  @media (min-width:900px) and (min-height:680px) and (orientation:landscape){
     .wrap{max-width:1180px;}
     .tabs{display:none;}                       /* no page-switching needed */
     .topbar{justify-content:flex-end;}         /* GPS button to the right */
     .pager{overflow:visible; scroll-snap-type:none; gap:22px;}
     .page{flex:1 1 0; width:auto; min-width:0; scroll-snap-align:none;}
+  }
+  /* Tablet PORTRAIT (e.g. iPad portrait): keep the swipe pages, but let the live
+     course map fill the full width of the screen. */
+  @media (min-width:600px) and (orientation:portrait){
+    .mapDiagram{max-width:none;}
+    .mapNote{max-width:none;}
   }
   tr.lapline td{border-bottom:2px dashed var(--accent);}
   .tag{display:block; font-size:12.5px; font-weight:700; letter-spacing:.3px; margin-top:2px;}
@@ -454,11 +460,6 @@
           <tbody></tbody>
           <tfoot></tfoot>
         </table>
-        <div id="diagram"></div>
-        <div class="toolbar">
-          <button onclick="track('print'); window.print();">Print / PDF</button>
-          <button onclick="goPage(1)">Open live map &#9654;</button>
-        </div>
       </div>
 
       <footer>
@@ -916,8 +917,7 @@ function renderResult(){
   $("cTable").querySelector("tfoot").innerHTML =
     `<tr><td></td><td>Total</td><td></td><td class="gap">${fmtNm(total)} nm</td><td></td></tr>`;
 
-  drawDiagram(seqArr, "diagram");      // small diagram on the course page
-  drawDiagram(seqArr, "mapDiagram");   // large diagram on the live map page
+  drawDiagram(seqArr, "mapDiagram");   // course map lives on the live map page only
   updateGuide();                       // refresh next-mark panel for the new course
 }
 
@@ -933,6 +933,7 @@ function projXY(lat, lon){
 }
 
 function drawDiagram(seqArr, targetId){
+  if(!$(targetId)) return;             // target may not exist (e.g. course-page diagram removed)
   const W=420, H=420, PAD=46;
   const cm = ACTIVE_MARKS[ACTIVE_START];
   const k = Math.cos(cm.lat*Math.PI/180);
@@ -1539,7 +1540,7 @@ function setCustomCourse(){
   geo.seqArr = []; geo.targetIdx = 1; $("windIn").value = "";
   state.committed = true;
   renderResult();
-  cmsg("Course set — see the heading table, the course map, and Map·Live.");
+  cmsg("Course set — see the heading table here and the live course map on Map·Live.");
   track("custom_set", { courseCode: "custom", detail: "marks="+parsed.order.length+"|laps="+customLaps });
 }
 
