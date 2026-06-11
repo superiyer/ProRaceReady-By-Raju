@@ -118,8 +118,7 @@
                    border-radius:7px; padding:7px 12px; font-size:13px; font-weight:700; cursor:pointer;}
   /* ---- map (live) page ---- */
   .mapBrand{margin-bottom:6px;}
-  .mapBrand .appTitle{font-size:24px;}
-  .mapBrand .byline{font-size:14px;}
+  /* Map page title + credits use the same sizes as the Course page (32px / 17px). */
   .mapHead{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 0;}
   .mapCourse{font-size:22px; font-weight:800; color:var(--accent); letter-spacing:.5px;}
   .mapStats{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;}
@@ -359,6 +358,11 @@
           <h2 id="markStepTitle">3 &middot; First mark (wind direction)</h2>
           <div class="grid marks" id="markBtns"></div>
         </div>
+
+        <div class="setBar">
+          <button class="setBtn" onclick="setKycCourse()">Set Course</button>
+        </div>
+        <div id="kycMsg" class="cMsg"></div>
       </div>
 
       <div id="customPicker" style="display:none">
@@ -688,8 +692,10 @@ function validateAll(){
 "use strict";
 /* ================= UI ================= */
 
-const state = { fam: FAMILIES[0], mark: "A", laps: 1, custom: false };
-let lastKyc = { fam: FAMILIES[0], mark: "A", laps: 1 };   // remembered KYC selection
+const state = { fam: FAMILIES[0], mark: "A", laps: 1, custom: false,
+                pickedFam: false, pickedMark: false, committed: false };
+let lastKyc = { fam: FAMILIES[0], mark: "A", laps: 1,
+                pickedFam: false, pickedMark: false, committed: false };   // remembered KYC selection
 let coordFmt = "dec";                                     // 'dec' | 'dm'
 let customLaps = 1;
 let customFinishEdited = false;                           // true once user edits Finish
@@ -715,17 +721,17 @@ function buildPickers(){
   const tb = $("typeBtns");
   FAMILIES.forEach(f=>{
     const b = mkBtn(`${f.code} &middot; ${f.name}<small>${f.dist}${f.downwindFinish?" &middot; downwind finish":""}</small>`,
-      "", ()=>{ state.fam=f; render(); });
+      "", ()=>{ state.fam=f; state.pickedFam=true; refreshPicker(); });
     b.dataset.code=f.code; tb.appendChild(b);
   });
   const mb = $("markBtns");
   ["A","B","C","D","E","F","G","H"].forEach(m=>{
-    const b = mkBtn(`${m}<small>${MARKS[m].dir} wind</small>`, "", ()=>{ state.mark=m; render(); });
+    const b = mkBtn(`${m}<small>${MARKS[m].dir} wind</small>`, "", ()=>{ state.mark=m; state.pickedMark=true; refreshPicker(); });
     b.dataset.mark=m; mb.appendChild(b);
   });
   const lb = $("lapBtns");
   [1,2,3,4].forEach(n=>{
-    const b = mkBtn(`${n}<small>lap${n>1?"s":""}</small>`, "", ()=>{ state.laps=n; render(); });
+    const b = mkBtn(`${n}<small>lap${n>1?"s":""}</small>`, "", ()=>{ state.laps=n; refreshPicker(); });
     b.dataset.laps=n; lb.appendChild(b);
   });
 }
@@ -746,15 +752,30 @@ function fmtPos(m){
 
 function markHtml(m){ return (m===ACTIVE_START || m===ACTIVE_FINISH) ? '<span class="cm">'+m+'</span>' : m; }
 
-function render(){
-  if(!state.custom) lastKyc = { fam: state.fam, mark: state.mark, laps: state.laps };
-  // selection highlights
-  document.querySelectorAll("#typeBtns .opt").forEach(b=>b.classList.toggle("sel", b.dataset.code===state.fam.code));
-  document.querySelectorAll("#markBtns .opt").forEach(b=>b.classList.toggle("sel", b.dataset.mark===state.mark));
+/* Update only the KYC picker (button highlights + step visibility).
+   Nothing in the result table / map is touched — that waits for Set Course. */
+function refreshPicker(){
+  document.querySelectorAll("#typeBtns .opt").forEach(b=>b.classList.toggle("sel", state.pickedFam && b.dataset.code===state.fam.code));
+  document.querySelectorAll("#markBtns .opt").forEach(b=>b.classList.toggle("sel", state.pickedMark && b.dataset.mark===state.mark));
   document.querySelectorAll("#lapBtns .opt").forEach(b=>b.classList.toggle("sel", +b.dataset.laps===state.laps));
-  $("lapStep").style.display = state.fam.laps ? "block" : "none";
-  $("markStepTitle").innerHTML = (state.fam.laps ? "3" : "2") + " &middot; First mark (wind direction)";
+  const showLaps = !state.pickedFam || state.fam.laps;
+  $("lapStep").style.display = showLaps ? "block" : "none";
+  $("markStepTitle").innerHTML = ((state.pickedFam && !state.fam.laps) ? "2" : "3") + " &middot; First mark (wind direction)";
+}
 
+/* Validate the KYC picker and reveal the course table + map. */
+function setKycCourse(){
+  if(!state.pickedFam){ kmsg("Pick a course type first.", true); return; }
+  if(!state.pickedMark){ kmsg("Pick the first mark (wind direction).", true); return; }
+  kmsg("");
+  state.committed = true;
+  renderResult();
+}
+
+function kmsg(text, isErr){ const e=$("kycMsg"); if(!e) return; e.textContent=text||""; e.className="cMsg"+(isErr?" err":""); }
+
+/* Build + show the course table, diagram and map for the committed selection. */
+function renderResult(){
   const fam = state.fam, mark = state.mark, laps = state.laps;
   const startLbl = ACTIVE_START;
   const seqArr = fullSequence(fam, mark, laps);
@@ -1179,14 +1200,22 @@ function setMode(mode){
   $("kycPicker").style.display = custom ? "none" : "block";
   $("customPicker").style.display = custom ? "block" : "none";
   if(custom){
+    // remember the KYC picker state so we can restore it on the way back
+    lastKyc = { fam:state.fam, mark:state.mark, laps:state.laps,
+                pickedFam:state.pickedFam, pickedMark:state.pickedMark, committed:state.committed };
+    state.custom = true;
     if(!$("markInputs").children.length) buildCustomForm();
-    $("result").style.display = "none";   // hide until Set Course
+    $("result").style.display = "none"; $("mapCourse").innerHTML = "&mdash;";   // hide until Set Course
   } else {
-    // restore the KYC course context and re-render the last KYC selection
+    // restore the KYC course context and the last KYC picker state
     ACTIVE_MARKS = MARKS; ACTIVE_HEADINGS = HEADINGS; ACTIVE_START = "CM"; ACTIVE_FINISH = "CM"; ACTIVE_VAR = MAG_VAR;
-    state.custom = false; state.fam = lastKyc.fam; state.mark = lastKyc.mark; state.laps = lastKyc.laps;
+    state.custom = false;
+    state.fam = lastKyc.fam; state.mark = lastKyc.mark; state.laps = lastKyc.laps;
+    state.pickedFam = lastKyc.pickedFam; state.pickedMark = lastKyc.pickedMark; state.committed = lastKyc.committed;
     $("windIn").value = "";
-    render();
+    refreshPicker();
+    if(state.committed){ renderResult(); }
+    else { $("result").style.display = "none"; $("mapCourse").innerHTML = "&mdash;"; }
   }
   track("mode_switch", { detail: mode });
 }
@@ -1198,9 +1227,10 @@ function setCoordFmt(f){
   $("coordHint").innerHTML = f === "dec"
     ? 'Decimal degrees, e.g. <b>40.4695</b> and <b>-74.2065</b> (minus = S/W).'
     : 'Degrees + decimal minutes, e.g. <b>40 28.17 N</b> and <b>074 12.39 W</b>.';
-  // update placeholders
+  // update placeholders — sample hints only on the Start row, the rest stay blank
   document.querySelectorAll("#markInputs .mkRow").forEach(r=>{
     const la = r.querySelector(".latIn"), lo = r.querySelector(".lonIn");
+    if(la.id !== "lat_S"){ la.placeholder = ""; lo.placeholder = ""; return; }
     if(f === "dec"){ la.placeholder = "40.4695"; lo.placeholder = "-74.2065"; }
     else { la.placeholder = "40 28.17 N"; lo.placeholder = "074 12.39 W"; }
   });
@@ -1216,9 +1246,12 @@ function buildCustomForm(){
   rows.forEach(([key, label, cls])=>{
     const div = document.createElement("div");
     div.className = "mkRow" + (cls ? " startRow" : "");
+    // sample-value hints appear only in the Start row; all other fields start blank
+    const phLat = key === "S" ? "40.4695" : "";
+    const phLon = key === "S" ? "-74.2065" : "";
     div.innerHTML = `<span class="mkLbl">${label}</span>`+
-      `<input class="latIn" id="lat_${key}" type="text" inputmode="text" placeholder="40.4695" autocomplete="off">`+
-      `<input class="lonIn" id="lon_${key}" type="text" inputmode="text" placeholder="-74.2065" autocomplete="off">`;
+      `<input class="latIn" id="lat_${key}" type="text" inputmode="text" placeholder="${phLat}" autocomplete="off">`+
+      `<input class="lonIn" id="lon_${key}" type="text" inputmode="text" placeholder="${phLon}" autocomplete="off">`;
     wrap.appendChild(div);
   });
   // Finish defaults to Start until the user edits it
@@ -1306,7 +1339,8 @@ function setCustomCourse(){
   fam.seq[parsed.order[0]] = parsed.order;     // per-lap sequence (keyed by first mark)
   state.fam = fam; state.mark = parsed.order[0]; state.laps = customLaps; state.custom = true;
   geo.seqArr = []; geo.targetIdx = 1; $("windIn").value = "";
-  render();
+  state.committed = true;
+  renderResult();
   cmsg("Course set — see the heading table, the course map, and Map·Live.");
   track("custom_set", { courseCode: "custom", detail: "marks="+parsed.order.length+"|laps="+customLaps });
 }
@@ -1502,15 +1536,14 @@ function showGate(msg){
 let gateOnline = false;
 const delay = (ms)=>new Promise(r=>setTimeout(r, ms));
 
-/* Launch sequence: animated splash (2.5s) -> User Agreement (every launch)
-   -> access code (remembered once validated). */
+/* Launch sequence: User Agreement (shown every launch, with logo + credits)
+   -> access code (remembered once validated). The separate timed splash is hidden
+   for now — the Agreement page already shows the logo and waits for an "I Agree" tap. */
 async function initGate(){
   $("agreeBox").style.display = "none";
   $("gateBox").style.display = "none";
   $("gateBusy").style.display = "block";
-  // play the splash animation while config loads in the background (min 2.5s)
-  const [online] = await Promise.all([ loadConfig(), delay(2500) ]);
-  gateOnline = online;
+  gateOnline = await loadConfig();
   if(CONFIG && CONFIG.message) $("splashMsg").textContent = CONFIG.message;
   // User Agreement — shown every launch (credit reads "By ..." here, not "Created by")
   $("splashByline").innerHTML = "By Raju Venkatraman &nbsp; 646.300.2466";
@@ -1555,9 +1588,8 @@ function authorize(via){
   AUTHORIZED = true;
   document.body.classList.add("unlocked");
   track("app_open", { detail: via });
-  // analytics that depend on a selected course
-  const c = courseCode(state.fam, state.mark, state.laps);
-  track("course_select", { courseCode:c, detail:state.fam.code+"|laps="+state.laps+"|mark="+state.mark });
+  // course_select is logged only when the user actually sets a course (Set Course),
+  // never on open — so we don't record a phantom default selection.
 }
 
 /* ---------- swipe pager nav ---------- */
@@ -1598,7 +1630,9 @@ if(errs.length){
   box.textContent="DATA ERRORS — fix before racing:\n"+errs.join("\n");
 }
 buildPickers();
-render();
+refreshPicker();                       // no default course selected
+$("result").style.display = "none";    // table + map appear only after Set Course
+$("mapCourse").innerHTML = "&mdash;";
 initGate();   // load remote config + run the access gate (splash stays until authorized)
 
 /* Offline support — only when served over http(s); no-op for file:// */
