@@ -121,11 +121,16 @@
   /* Map page title + credits use the same sizes as the Course page (32px / 17px). */
   .mapHead{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 0;}
   .mapCourse{font-size:22px; font-weight:800; color:var(--accent); letter-spacing:.5px;}
-  .mapStats{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;}
+  .mapStats{display:grid; grid-template-columns:1fr 1fr auto; gap:8px; margin-bottom:10px;}
   .mapStats .stat{background:var(--ink); color:#fff; border-radius:14px; padding:10px 8px; text-align:center;}
   .mapStats .stat .lbl{color:#9fb3d0;}
-  .mapStats .stat .val{font-size:clamp(40px,14vw,64px); color:#fff; line-height:1;}
+  .mapStats .stat .val{font-size:clamp(34px,11vw,58px); color:#fff; line-height:1;}
   .mapStats .stat .unit{color:#9fb3d0;}
+  .windCompass{background:var(--ink); border-radius:14px; padding:6px 8px 7px; display:flex;
+               flex-direction:column; align-items:center; justify-content:center; gap:3px; min-width:92px;}
+  .windCompass svg{width:74px; height:74px; display:block;}
+  .windCompass .wcLbl{color:#9fb3d0; font-size:11px; font-weight:700; letter-spacing:.5px;}
+  .windCompass .wcLbl b{color:#ffd54a;}
   .mapDiagram{max-width:560px; margin:10px auto;}
   .mapDiagram svg{width:100%; height:auto; display:block; border:1px solid var(--line);
                   border-radius:12px; background:#fbfcfe;}
@@ -142,8 +147,17 @@
   .posbar #livePos{font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
   .posbar #acc{color:var(--muted); font-size:13px;}
   .maphint{margin-top:10px; color:var(--muted); font-size:13px;}
-  .appTitle{font-size:32px; font-weight:800; letter-spacing:.3px; color:var(--accent);}
-  .titleIcon{height:1.05em; width:auto; border-radius:6px; vertical-align:-0.18em; margin-left:10px;}
+  /* brand band: logo at full height to the left of the title + credits */
+  .brand{display:flex; align-items:center; gap:14px; padding:6px 0;}
+  .brandLogo{height:70px; width:70px; object-fit:contain; border-radius:14px; flex:0 0 auto;
+             box-shadow:0 1px 4px rgba(11,31,58,.18);}
+  .brandText{display:flex; flex-direction:column; justify-content:center; gap:7px; min-width:0;}
+  .appTitle{font-size:32px; font-weight:800; letter-spacing:.3px; color:var(--accent); line-height:1;}
+  .creditsBand{display:inline-block; align-self:flex-start; font-size:13px; font-weight:700;
+               letter-spacing:.4px; color:var(--accent);
+               background:linear-gradient(90deg, rgba(11,79,179,.13), rgba(11,79,179,0));
+               border-left:3px solid var(--accent); padding:4px 12px; border-radius:0 8px 8px 0;}
+  .creditsBand .sep{color:var(--muted); margin:0 7px;}
   .rule{border:none; border-top:2px solid var(--ink); margin:8px 0;}
   .byline{font-size:17px; font-weight:700; color:var(--ink); letter-spacing:.4px;}
   header h1{margin:14px 0 8px; font-size:22px; letter-spacing:.3px;}
@@ -199,6 +213,9 @@
     td.hdg{font-size:26px;}
     td.pos{font-size:12.5px;}
     td.dist{font-size:15px;}
+    .appTitle{font-size:27px;}
+    .brandLogo{height:58px; width:58px;}
+    .brand{gap:11px;}
   }
   tr.lapline td{border-bottom:2px dashed var(--accent);}
   .tag{display:block; font-size:12.5px; font-weight:700; letter-spacing:.3px; margin-top:2px;}
@@ -214,7 +231,8 @@
                   border-radius:8px; padding:10px 18px; font-size:16px; font-weight:700; cursor:pointer;}
   #valErrors{display:none; background:#fdecea; border:2px solid var(--warn); color:var(--warn);
              padding:10px 14px; border-radius:8px; margin-top:14px; font-size:15px; white-space:pre-line;}
-  footer{margin-top:26px; color:var(--muted); font-size:13px;}
+  footer{margin-top:26px; color:var(--muted); font-size:13px; border-top:2px solid var(--ink); padding-top:12px;}
+  footer .discl{margin-bottom:2px;}
   .raceRule{color:var(--ink); font-size:15px; font-weight:600; border-top:2px solid var(--ink);
             padding-top:10px; margin-bottom:8px;}
   .discl{display:block; color:var(--ink); font-weight:600;}
@@ -301,8 +319,9 @@
 
     <div id="agreeBox" class="agreeBox" style="display:none">
       <div class="agreeTitle">User Agreement</div>
-      <div class="agreeText">Use of this app is at your own risk. The developer makes no warranties and
-        accepts no liability for course errors, race results, or any damage arising from use of this app.</div>
+      <div class="agreeText">Use of this application is at your own risk. The developer makes no warranties
+        and accepts no liability for course errors, race results, or any damages whatsoever arising from
+        use of this application.</div>
       <div class="agreeSub">This app may record anonymous usage and, while GPS is on, basic sailing data
         (speed, course, position) to help improve it.</div>
       <button id="agreeBtn" type="button" class="agreeBtn">I Agree</button>
@@ -336,9 +355,14 @@
     <!-- ============ PAGE 0 : COURSE ============ -->
     <section class="page" id="pg0">
       <header>
-        <div class="appTitle">Pro Race Ready<img class="titleIcon" src="icon-192.png" alt="Pro Race Ready icon"></div>
         <hr class="rule">
-        <div class="byline">Created by Raju Venkatraman -&nbsp; 646.300.2466</div>
+        <div class="brand">
+          <img class="brandLogo" src="icon-192.png" alt="Pro Race Ready">
+          <div class="brandText">
+            <div class="appTitle">Pro Race Ready!</div>
+            <div class="creditsBand">Created by Raju Venkatraman<span class="sep">&bull;</span>646.300.2466</div>
+          </div>
+        </div>
         <hr class="rule">
         <h1>Race Course Headings</h1>
         <span class="portnote">ALL MARK ROUNDINGS TO PORT</span>
@@ -429,30 +453,33 @@
       </div>
 
       <footer>
-        <div class="raceRule">You may pass on either side of the start/finish line during the race;
-        cross it only when starting, preparing to start, or finishing.</div>
-        Headings are fixed values from the published course table (magnetic). Distances computed from
-        mark GPS positions and are approximate. Pass CM to <b>port</b> between laps, to
-        <b>starboard</b> to finish.
+        <span class="discl">User Agreement: Use of this application is at your own risk. The developer
+        makes no warranties and accepts no liability for course errors, race results, or any damages
+        whatsoever arising from use of this application.</span>
         <br><br>
+        Headings are fixed values from the course table (magnetic). Distances computed from mark GPS
+        positions and are approximate.
+        <br>
         Live GPS shows speed over ground (SOG), course over ground (COG, magnetic), your position, and
-        next-mark guidance. SOG/COG can read &mdash; until the phone is moving, and phone GPS is jumpy at
-        low speed. GPS needs the app served over <b>https://</b> (the hosted version) and location
-        permission &mdash; it is blocked when opening the file directly.
-        <br><br>
-        <span class="discl">User Agreement: Use of this app is at your own risk. The developer makes no
-        warranties and accepts no liability for course errors, race results, or any damage arising from
-        use of this app.</span>
+        next-mark guidance.
+        <br>
+        SOG/COG can read &mdash; until the phone is moving, and phone GPS can be jumpy at low speed.
       </footer>
     </section>
 
     <!-- ============ PAGE 1 : MAP (LIVE) ============ -->
     <section class="page" id="pg1">
       <header class="mapBrand">
-        <div class="appTitle">Pro Race Ready<img class="titleIcon" src="icon-192.png" alt="Pro Race Ready icon"></div>
-        <div class="byline">Created by Raju Venkatraman -&nbsp; 646.300.2466</div>
+        <hr class="rule">
+        <div class="brand">
+          <img class="brandLogo" src="icon-192.png" alt="Pro Race Ready">
+          <div class="brandText">
+            <div class="appTitle">Pro Race Ready!</div>
+            <div class="creditsBand">Created by Raju Venkatraman<span class="sep">&bull;</span>646.300.2466</div>
+          </div>
+        </div>
+        <hr class="rule">
       </header>
-      <hr class="rule">
 
       <div class="mapHead">
         <span id="mapCourse" class="mapCourse">&mdash;</span>
@@ -462,6 +489,7 @@
       <div class="mapStats">
         <div class="stat"><div class="lbl">SOG</div><div class="val" id="sog">&mdash;</div><div class="unit">knots</div></div>
         <div class="stat"><div class="lbl">COG</div><div class="val" id="cog">&mdash;</div><div class="unit">&deg; magnetic</div></div>
+        <div id="windCompass" class="windCompass"></div>
       </div>
 
       <div class="guide" id="guide">
@@ -505,8 +533,7 @@
         <span id="livePos">&mdash;</span>
         <span id="acc"></span>
       </div>
-      <div class="maphint">Boat shows as a green dot with a heading arrow; your track trails behind.
-      Swipe left or tap <b>Course</b> to return to the heading table.</div>
+      <div class="maphint">Boat shows as a green dot with a heading arrow; your track trails behind.</div>
     </section>
 
   </div>
@@ -1148,8 +1175,37 @@ function fmtPos2(lat, lon){
   return `${part(lat)} ${lat>=0?"N":"S"} &nbsp; ${part(lon).replace(/^(\d+)/,m=>m.padStart(3,"0"))} ${lon<0?"W":"E"}`;
 }
 
+/* wind/compass rose on the map (north-up): amber arrow points to windward
+   (the direction the wind is coming FROM), matching the entered "Wind from". */
+function drawWindCompass(){
+  const el = $("windCompass"); if(!el) return;
+  const w = getWind();                       // wind-from bearing (magnetic) or null
+  const cx=50, cy=50, R=40;
+  const scr = (b, r)=>({ x: cx + r*Math.cos((b-90)*Math.PI/180), y: cy + r*Math.sin((b-90)*Math.PI/180) });
+  let s = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`;
+  s += `<circle cx="50" cy="50" r="${R}" fill="#13243d" stroke="#34507a" stroke-width="1.5"/>`;
+  [["N",0],["E",90],["S",180],["W",270]].forEach(([lab,deg])=>{
+    const p = scr(deg, R-9);
+    s += `<text x="${p.x.toFixed(1)}" y="${(p.y+3.6).toFixed(1)}" font-size="10" font-weight="800" text-anchor="middle" fill="${lab==="N"?"#ff6b5e":"#9fb3d0"}">${lab}</text>`;
+  });
+  if(w == null){
+    s += `<circle cx="50" cy="50" r="3" fill="#5b6f8c"/>`;
+  } else {
+    const ang=(w-90)*Math.PI/180;
+    const tip = scr(w, R-6), tail = scr((w+180)%360, R-16);
+    s += `<line x1="${tail.x.toFixed(1)}" y1="${tail.y.toFixed(1)}" x2="${tip.x.toFixed(1)}" y2="${tip.y.toFixed(1)}" stroke="#ffd54a" stroke-width="3.2" stroke-linecap="round"/>`;
+    const a1=ang+Math.PI-0.42, a2=ang+Math.PI+0.42, AL=8;
+    s += `<path d="M${tip.x.toFixed(1)},${tip.y.toFixed(1)} L${(tip.x+AL*Math.cos(a1)).toFixed(1)},${(tip.y+AL*Math.sin(a1)).toFixed(1)} L${(tip.x+AL*Math.cos(a2)).toFixed(1)},${(tip.y+AL*Math.sin(a2)).toFixed(1)} z" fill="#ffd54a"/>`;
+    s += `<circle cx="50" cy="50" r="2.6" fill="#ffd54a"/>`;
+  }
+  s += `</svg>`;
+  const lbl = w==null ? "WIND <b>&mdash;</b>" : "WIND <b>"+String(Math.round(w)%360).padStart(3,"0")+"&deg;M</b>";
+  el.innerHTML = s + `<div class="wcLbl">${lbl}</div>`;
+}
+
 /* auto-advance through the course and fill the next-mark guidance panel */
 function updateGuide(){
+  drawWindCompass();
   const seq = geo.seqArr;
   $("guide").style.display = seq.length ? "block" : "none";
   if(!seq.length) return;
@@ -1677,6 +1733,7 @@ buildPickers();
 refreshPicker();                       // no default course selected
 $("result").style.display = "none";    // table + map appear only after Set Course
 $("mapCourse").innerHTML = "&mdash;";
+drawWindCompass();                     // show the wind dial even before a course is set
 initGate();   // load remote config + run the access gate (splash stays until authorized)
 
 /* Offline support — only when served over http(s); no-op for file:// */
