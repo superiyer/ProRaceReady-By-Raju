@@ -27,12 +27,28 @@
   .splashCard{background:#fff; border-radius:18px; max-width:420px; width:100%; padding:22px 20px;
               text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.4);}
   .splashLogo{width:min(320px,80%); height:auto; margin:4px auto 6px;}
-  .splashClub{font-size:16px; font-weight:800; color:var(--ink); letter-spacing:.3px;}
-  .splashLoc{font-size:13px; color:var(--muted); margin-bottom:6px;}
-  .splash .appTitle{margin-top:6px;}
-  .splash .byline{margin-bottom:6px;}
+  .splashLogo.anim{animation:logoIn 1s ease-out both, logoFloat 3s ease-in-out 1s infinite;}
+  @keyframes logoIn{ from{opacity:0; transform:scale(.78) translateY(8px);} to{opacity:1; transform:scale(1) translateY(0);} }
+  @keyframes logoFloat{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
+  .splash .byline{margin-bottom:6px; animation:fadeIn 1.2s ease-out .4s both;}
+  @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
   .splashMsg{color:var(--accent); font-weight:700; font-size:14px; margin:4px 0;}
   .splashMsg:empty{display:none;}
+  /* loading dots during the 2.5s splash animation */
+  .gateBusy{margin-top:14px; text-align:center;}
+  .gateBusy .dots{display:inline-flex; gap:7px;}
+  .gateBusy .dots i{width:9px; height:9px; border-radius:50%; background:var(--accent); opacity:.35;
+       animation:dotPulse 1.1s ease-in-out infinite;}
+  .gateBusy .dots i:nth-child(2){animation-delay:.18s;}
+  .gateBusy .dots i:nth-child(3){animation-delay:.36s;}
+  @keyframes dotPulse{ 0%,100%{opacity:.3; transform:scale(.8);} 50%{opacity:1; transform:scale(1.15);} }
+  /* user agreement */
+  .agreeBox{margin-top:12px; animation:fadeIn .4s ease-out both;}
+  .agreeTitle{font-size:18px; font-weight:800; color:var(--ink); margin-bottom:6px;}
+  .agreeText{font-size:14px; color:var(--ink); line-height:1.5;}
+  .agreeSub{font-size:11.5px; color:var(--muted); line-height:1.4; margin-top:8px;}
+  .agreeBtn{appearance:none; border:none; background:var(--ok); color:#fff; font-size:19px; font-weight:800;
+       padding:13px 30px; border-radius:11px; cursor:pointer; margin-top:14px; min-height:52px; width:100%;}
   .gateBox{margin-top:8px; display:none;}
   .gateBox label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.8px;
                  color:var(--muted); margin-bottom:6px;}
@@ -270,12 +286,22 @@
 <!-- ============ SPLASH / ACCESS GATE ============ -->
 <div id="splash" class="splash">
   <div class="splashCard">
-    <img class="splashLogo" src="pro-race-ready-logo.jpg" alt="Pro Race Ready">
-    <hr class="rule">
+    <img class="splashLogo anim" src="pro-race-ready-logo.jpg" alt="Pro Race Ready">
     <div class="byline">Created by Raju Venkatraman -&nbsp; 646.300.2466</div>
-    <hr class="rule">
+
+    <div id="gateBusy" class="gateBusy"><span class="dots"><i></i><i></i><i></i></span></div>
+
+    <div id="agreeBox" class="agreeBox" style="display:none">
+      <div class="agreeTitle">User Agreement</div>
+      <div class="agreeText">Use of this app is at your own risk. The developer makes no warranties and
+        accepts no liability for course errors, race results, or any damage arising from use of this app.</div>
+      <div class="agreeSub">This app may record anonymous usage and, while GPS is on, basic sailing data
+        (speed, course, position) to help improve it.</div>
+      <button id="agreeBtn" type="button" class="agreeBtn">I Agree</button>
+    </div>
+
     <div id="splashMsg" class="splashMsg"></div>
-    <div id="gateBox" class="gateBox">
+    <div id="gateBox" class="gateBox" style="display:none">
       <label for="codeIn">Access code</label>
       <div class="gateRow">
         <input id="codeIn" type="text" autocomplete="off" autocapitalize="characters"
@@ -284,13 +310,6 @@
       </div>
       <div id="gateMsg" class="gateMsg"></div>
     </div>
-    <div id="gateBusy" class="gateBusy">Loading…</div>
-    <div class="splashPriv">By entering you agree this app may record anonymous usage and,
-      while GPS is on, basic sailing data (speed, course, position) to help improve it.</div>
-    <div class="splashDisc">By using this application you agree to do so entirely at your own risk.
-      The developer is not responsible for any errors in courses, any impact on race results from
-      using the application, or any mishaps or damages caused to the user or others.
-      <b>NO LIABILITY OF ANY SORT WILL BE ENFORCEABLE ON THE DEVELOPER.</b></div>
   </div>
 </div>
 
@@ -408,10 +427,9 @@
         low speed. GPS needs the app served over <b>https://</b> (the hosted version) and location
         permission &mdash; it is blocked when opening the file directly.
         <br><br>
-        <span class="discl">Disclaimer: Use this application entirely at your own risk. The developer is
-        not responsible for any errors in courses, any impact on race results from using the application,
-        or any mishaps or damages caused to the user or others.
-        <b>NO LIABILITY OF ANY SORT WILL BE ENFORCEABLE ON THE DEVELOPER.</b></span>
+        <span class="discl">User Agreement: Use of this app is at your own risk. The developer makes no
+        warranties and accepts no liability for course errors, race results, or any damage arising from
+        use of this app.</span>
       </footer>
     </section>
 
@@ -1461,18 +1479,36 @@ function showGate(msg){
   try{ inp.focus(); }catch(e){}
 }
 
+let gateOnline = false;
+const delay = (ms)=>new Promise(r=>setTimeout(r, ms));
+
+/* Launch sequence: animated splash (2.5s) -> User Agreement (every launch)
+   -> access code (remembered once validated). */
 async function initGate(){
-  const online = await loadConfig();
+  $("agreeBox").style.display = "none";
+  $("gateBox").style.display = "none";
+  $("gateBusy").style.display = "block";
+  // play the splash animation while config loads in the background (min 2.5s)
+  const [online] = await Promise.all([ loadConfig(), delay(2500) ]);
+  gateOnline = online;
   if(CONFIG && CONFIG.message) $("splashMsg").textContent = CONFIG.message;
+  // User Agreement — shown every launch
+  $("gateBusy").style.display = "none";
+  $("agreeBox").style.display = "block";
+}
+
+function onAgree(){
+  track("agree");
+  $("agreeBox").style.display = "none";
   let stored = null;
   try{ stored = JSON.parse(localStorage.getItem(AUTH_KEY) || "null"); }catch(e){}
-
-  if(online && CONFIG && Array.isArray(CONFIG.codes)){
+  // access code is asked once and then remembered
+  if(gateOnline && CONFIG && Array.isArray(CONFIG.codes)){
     if(stored && CONFIG.codes.includes(stored.hash)) return authorize("auto");
     showGate(stored ? "Access code has changed — please enter the new code." : "");
-  } else if(!online){
+  } else if(!gateOnline){
     if(stored && CONFIG && Array.isArray(CONFIG.codes) && CONFIG.codes.includes(stored.hash)) return authorize("offline");
-    if(stored && !CONFIG) return authorize("offline");   // offline, no cached config, but was validated before
+    if(stored && !CONFIG) return authorize("offline");
     showGate("Connect to the internet once to activate this app.");
   } else {
     showGate("Couldn't load access settings — check your connection and retry.");
@@ -1530,6 +1566,7 @@ $("windIn").addEventListener("change", ()=>{ if(AUTHORIZED) track("wind_set", { 
 
 // gate controls
 $("gateBtn").addEventListener("click", submitCode);
+$("agreeBtn").addEventListener("click", onAgree);
 $("codeIn").addEventListener("keydown", e=>{ if(e.key==="Enter") submitCode(); });
 
 /* ---------- boot ---------- */
