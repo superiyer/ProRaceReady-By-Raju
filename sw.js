@@ -1,5 +1,5 @@
 /* KYC Race Ready — offline cache. Bump CACHE version when files change. */
-const CACHE = "wnr-v7";
+const CACHE = "wnr-v8";
 const ASSETS = [
   "./",
   "./index.html",

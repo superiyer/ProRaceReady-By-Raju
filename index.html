@@ -61,6 +61,43 @@
   .page{flex:0 0 100%; width:100%; scroll-snap-align:start;
         height:calc(100dvh - 59px); overflow-y:auto; -webkit-overflow-scrolling:touch;
         padding:14px 14px 60px;}
+  /* ---- mode toggle + custom race form ---- */
+  .modeToggle{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:14px 0 4px;}
+  .modeBtn{appearance:none; border:2px solid var(--accent); background:#fff; color:var(--accent);
+           border-radius:11px; padding:13px 8px; font-size:17px; font-weight:800; cursor:pointer; min-height:54px;}
+  .modeBtn.sel{background:var(--accent); color:#fff;}
+  .cstmTop{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-bottom:8px;}
+  .cstmField{display:flex; flex-direction:column; gap:5px;}
+  .cstmField > label{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted);}
+  .segmented{display:flex; border:2px solid var(--accent); border-radius:9px; overflow:hidden;}
+  .seg{appearance:none; border:none; background:#fff; color:var(--accent); padding:8px 14px; font-size:14px; font-weight:700; cursor:pointer;}
+  .seg.sel{background:var(--accent); color:#fff;}
+  .varRow{display:flex; gap:6px; align-items:center;}
+  .varRow input{width:70px; font-size:17px; font-weight:700; text-align:center; padding:8px 4px; border:2px solid var(--line); border-radius:8px;}
+  .varRow select{font-size:15px; padding:8px 4px; border:2px solid var(--line); border-radius:8px;}
+  .coordHint{font-size:13px; color:var(--muted); margin:2px 0 10px;}
+  .mkRow{display:grid; grid-template-columns:74px 1fr 1fr; gap:8px; align-items:center; margin-bottom:8px;}
+  .mkRow .mkLbl{font-size:15px; font-weight:800; color:var(--ink);}
+  .mkRow.startRow .mkLbl{color:var(--cm);}
+  .mkRow input{font-size:16px; padding:9px 8px; border:2px solid var(--line); border-radius:8px; min-width:0;
+               font-variant-numeric:tabular-nums;}
+  .mkRow input:focus{border-color:var(--accent); outline:none;}
+  .setBar{margin:12px 0 6px;}
+  .setBtn{appearance:none; border:none; background:var(--ok); color:#fff; font-size:19px; font-weight:800;
+          padding:14px; border-radius:11px; width:100%; cursor:pointer; min-height:54px;}
+  .saveRow{display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;}
+  .saveRow input{flex:1 1 150px; font-size:15px; padding:10px; border:2px solid var(--line); border-radius:9px;}
+  .saveRow button{appearance:none; border:2px solid var(--ink); background:#fff; color:var(--ink);
+                  border-radius:9px; padding:10px 14px; font-size:14px; font-weight:700; cursor:pointer;}
+  .cMsg{min-height:18px; margin-top:8px; font-size:14px; font-weight:700; color:var(--accent);}
+  .cMsg.err{color:var(--warn);}
+  .retrieveBox{margin-top:10px; border:1px solid var(--line); border-radius:10px; padding:8px;}
+  .raceItem{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 6px; border-bottom:1px solid var(--line);}
+  .raceItem:last-child{border-bottom:none;}
+  .raceItem .rn{font-weight:700;}
+  .raceItem .rmeta{font-size:12px; color:var(--muted);}
+  .raceItem button{appearance:none; border:1.5px solid var(--accent); background:var(--accent); color:#fff;
+                   border-radius:7px; padding:7px 12px; font-size:13px; font-weight:700; cursor:pointer;}
   /* ---- map (live) page ---- */
   .mapBrand{margin-bottom:6px;}
   .mapBrand .appTitle{font-size:24px;}
@@ -279,19 +316,62 @@
 
       <div id="valErrors"></div>
 
-      <div class="step">
-        <h2>1 &middot; Course type</h2>
-        <div class="grid types" id="typeBtns"></div>
+      <div class="modeToggle">
+        <button id="modeKyc" class="modeBtn sel" onclick="setMode('kyc')">KYC Wed Race</button>
+        <button id="modeCustom" class="modeBtn" onclick="setMode('custom')">Custom Race</button>
       </div>
 
-      <div class="step" id="lapStep">
-        <h2>2 &middot; Laps</h2>
-        <div class="grid laps" id="lapBtns"></div>
+      <div id="kycPicker">
+        <div class="step">
+          <h2>1 &middot; Course type</h2>
+          <div class="grid types" id="typeBtns"></div>
+        </div>
+
+        <div class="step" id="lapStep">
+          <h2>2 &middot; Laps</h2>
+          <div class="grid laps" id="lapBtns"></div>
+        </div>
+
+        <div class="step">
+          <h2 id="markStepTitle">3 &middot; First mark (wind direction)</h2>
+          <div class="grid marks" id="markBtns"></div>
+        </div>
       </div>
 
-      <div class="step">
-        <h2 id="markStepTitle">3 &middot; First mark (wind direction)</h2>
-        <div class="grid marks" id="markBtns"></div>
+      <div id="customPicker" style="display:none">
+        <div class="step">
+          <h2>Custom race &middot; enter marks in order</h2>
+          <div class="cstmTop">
+            <div class="cstmField">
+              <label>Coordinate format</label>
+              <div class="segmented">
+                <button id="fmtDec" class="seg sel" onclick="setCoordFmt('dec')">Decimal</button>
+                <button id="fmtDM" class="seg" onclick="setCoordFmt('dm')">Deg Min</button>
+              </div>
+            </div>
+            <div class="cstmField">
+              <label>Magnetic variation</label>
+              <span class="varRow"><input id="cVar" type="number" step="0.1" value="14" inputmode="decimal">
+              <select id="cVarDir"><option value="W">&deg;W</option><option value="E">&deg;E</option></select></span>
+            </div>
+          </div>
+          <div class="coordHint" id="coordHint">Decimal degrees, e.g. <b>40.4695</b> and <b>-74.2065</b> (minus = S/W).</div>
+          <div id="markInputs"></div>
+          <div class="cstmField">
+            <label>Laps</label>
+            <div class="grid laps" id="cLapBtns"></div>
+          </div>
+          <div class="setBar">
+            <button class="setBtn" onclick="setCustomCourse()">Set Course</button>
+          </div>
+          <div class="saveRow">
+            <input id="cRaceName" type="text" placeholder="Race name (to save / share)" autocomplete="off">
+            <button onclick="saveCustomRace()">Save</button>
+            <button onclick="openRetrieve()">Saved races</button>
+          </div>
+          <div id="cMsg" class="cMsg"></div>
+          <div id="retrieveBox" class="retrieveBox" style="display:none"></div>
+        </div>
       </div>
 
       <div id="result">
@@ -473,8 +553,12 @@ const MAG_VAR = (function(){
   return Math.atan2(sy, sx)*180/Math.PI;   // ~ +14.1
 })();
 
-function trueToMag(t){ return ((t + MAG_VAR) % 360 + 360) % 360; }
+function trueToMag(t){ return ((t + ACTIVE_VAR) % 360 + 360) % 360; }
 function bearingMag(p, q){ return trueToMag(trueBrg(p, q)); }
+
+/* Active course context — swapped between the KYC data and a user-entered custom
+   course. Defaults to the KYC data, so KYC mode behaves exactly as before. */
+let ACTIVE_MARKS = MARKS, ACTIVE_HEADINGS = HEADINGS, ACTIVE_START = "CM", ACTIVE_VAR = MAG_VAR;
 
 /* signed smallest angle a->b in (-180,180]; +ve means b is clockwise of a */
 function angleDiff(a, b){ return ((b - a + 540) % 360) - 180; }
@@ -526,8 +610,8 @@ function computeTactics(brgMark, twd){
 function fullSequence(family, mark, laps){
   const lap = family.seq[mark];
   const n = family.laps ? laps : 1;
-  const out = ["CM"];
-  for(let i=0;i<n;i++){ out.push(...lap, "CM"); }
+  const out = [ACTIVE_START];
+  for(let i=0;i<n;i++){ out.push(...lap, ACTIVE_START); }
   return out;
 }
 
@@ -540,11 +624,11 @@ function buildLegs(seqArr){
   const legs = [];
   for(let i=0;i<seqArr.length-1;i++){
     const from = seqArr[i], to = seqArr[i+1];
-    const heading = (HEADINGS[from]||{})[to];
+    const heading = (ACTIVE_HEADINGS[from]||{})[to];
     legs.push({
       from, to, heading,
-      dist: distNm(MARKS[from], MARKS[to]),
-      toCM: to==="CM" ? (i+1===seqArr.length-1 ? "finish" : "mid") : null,
+      dist: distNm(ACTIVE_MARKS[from], ACTIVE_MARKS[to]),
+      toCM: to===ACTIVE_START ? (i+1===seqArr.length-1 ? "finish" : "mid") : null,
     });
   }
   return legs;
@@ -576,7 +660,10 @@ function validateAll(){
 "use strict";
 /* ================= UI ================= */
 
-const state = { fam: FAMILIES[0], mark: "A", laps: 1 };
+const state = { fam: FAMILIES[0], mark: "A", laps: 1, custom: false };
+let lastKyc = { fam: FAMILIES[0], mark: "A", laps: 1 };   // remembered KYC selection
+let coordFmt = "dec";                                     // 'dec' | 'dm'
+let customLaps = 1;
 
 /* live GPS state */
 const geo = {
@@ -618,7 +705,7 @@ function fmtNm(x){ return x.toFixed(2); }
 
 /* decimal degrees -> D°MM.MM' (matches the published mark table) */
 function fmtPos(m){
-  const p = MARKS[m];
+  const p = ACTIVE_MARKS[m];
   const part = (v)=>{
     const a = Math.abs(v), d = Math.floor(a);
     return { d, min: ((a-d)*60).toFixed(2).padStart(5,"0") };
@@ -628,9 +715,10 @@ function fmtPos(m){
          `${String(lo.d).padStart(3,"0")}&deg;${lo.min}&prime; ${p.lon<0?"W":"E"}`;
 }
 
-function markHtml(m){ return m==="CM" ? '<span class="cm">CM</span>' : m; }
+function markHtml(m){ return m===ACTIVE_START ? '<span class="cm">'+m+'</span>' : m; }
 
 function render(){
+  if(!state.custom) lastKyc = { fam: state.fam, mark: state.mark, laps: state.laps };
   // selection highlights
   document.querySelectorAll("#typeBtns .opt").forEach(b=>b.classList.toggle("sel", b.dataset.code===state.fam.code));
   document.querySelectorAll("#markBtns .opt").forEach(b=>b.classList.toggle("sel", b.dataset.mark===state.mark));
@@ -639,6 +727,7 @@ function render(){
   $("markStepTitle").innerHTML = (state.fam.laps ? "3" : "2") + " &middot; First mark (wind direction)";
 
   const fam = state.fam, mark = state.mark, laps = state.laps;
+  const startLbl = ACTIVE_START;
   const seqArr = fullSequence(fam, mark, laps);
   const legs = buildLegs(seqArr);
   const total = legs.reduce((s,l)=>s+l.dist,0);
@@ -648,29 +737,37 @@ function render(){
   const courseChanged = geo.seqArr.join() !== seqArr.join();
   if(courseChanged){
     geo.seqArr = seqArr; geo.targetIdx = 1; geo.manual = false;
-    geo.nominalWind = Math.round(bearingMag(MARKS.CM, MARKS[mark])) % 360; // wind ~ from windward mark
+    geo.nominalWind = Math.round(bearingMag(ACTIVE_MARKS[ACTIVE_START], ACTIVE_MARKS[fam.seq[mark][0]])) % 360;
     $("windNom").textContent = String(geo.nominalWind).padStart(3,"0") + "°";
     if($("windIn").value === "") $("windIn").value = geo.nominalWind;
     if(typeof AUTHORIZED !== "undefined" && AUTHORIZED)
-      track("course_select", { courseCode: code, detail: fam.code+"|laps="+laps+"|mark="+mark });
+      track("course_select", { courseCode: code, detail: (state.custom?"custom":fam.code)+"|laps="+laps+"|mark="+mark });
   }
 
+  const displayCode = state.custom ? (fam.name || "Custom") : code;
   $("result").style.display = "block";
-  $("cCode").textContent = code;
-  $("cName").textContent = fam.name;
+  $("cCode").textContent = displayCode;
+  $("cName").textContent = state.custom ? (laps + " lap" + (laps>1?"s":"")) : fam.name;
+  $("mapCourse").textContent = displayCode;
 
+  const varLbl = Math.abs(Math.round(ACTIVE_VAR)) + "&deg;" + (ACTIVE_VAR>=0 ? "W" : "E");
   $("cFacts").innerHTML =
-    `<span class="fact">Wind <b>${MARKS[mark].dir}</b></span>`+
-    `<span class="fact">Published <b>${fam.dist}</b></span>`+
+    (state.custom
+      ? `<span class="fact">Marks <b>${fam.seq[mark].length}</b></span>`+
+        `<span class="fact">Variation <b>${varLbl}</b></span>`
+      : `<span class="fact">Wind <b>${ACTIVE_MARKS[mark].dir}</b></span>`+
+        `<span class="fact">Published <b>${fam.dist}</b></span>`)+
     `<span class="fact">Computed <b>${fmtNm(total)} nm</b></span>`+
     `<span class="fact">Legs <b>${legs.length}</b></span>`;
 
   let notes = "";
+  if(state.custom)
+    notes += `<div class="note">Headings computed from your mark coordinates (magnetic, ${varLbl} variation).</div>`;
   if(fam.downwindFinish)
     notes += `<div class="note dw">Finishes DOWNWIND &mdash; leave the start/finish mark to STARBOARD, committee boat to port.</div>`;
   if(fam.note) notes += `<div class="note">${fam.note}</div>`;
   if(fam.laps && laps>1)
-    notes += `<div class="note">${laps} laps &mdash; pass CM to <b>port</b> between laps; CM to <b>starboard</b> only at the finish.</div>`;
+    notes += `<div class="note">${laps} laps &mdash; pass ${startLbl} to <b>port</b> between laps; ${startLbl} to <b>starboard</b> only at the finish.</div>`;
   $("cNotes").innerHTML = notes;
 
   $("cSeq").innerHTML = seqArr.map(markHtml).join(' <span style="color:var(--muted)">&rarr;</span> ');
@@ -682,7 +779,7 @@ function render(){
     const tr = document.createElement("tr");
     let tag = "";
     if(i===0) tag = `<span class="tag start">START</span>`;
-    if(l.toCM==="mid") tag = `<span class="tag port">pass CM to PORT &rarr; lap ${Math.floor((i+1)/( (seqArr.length-1)/ (fam.laps?laps:1) ))+1}</span>`;
+    if(l.toCM==="mid") tag = `<span class="tag port">pass ${startLbl} to PORT &rarr; lap ${Math.floor((i+1)/( (seqArr.length-1)/ (fam.laps?laps:1) ))+1}</span>`;
     if(l.toCM==="finish") tag = `<span class="tag stbd">FINISH</span>`;
     if(l.toCM==="mid") tr.className = "lapline";
     tr.innerHTML =
@@ -698,7 +795,6 @@ function render(){
 
   drawDiagram(seqArr, "diagram");      // small diagram on the course page
   drawDiagram(seqArr, "mapDiagram");   // large diagram on the live map page
-  $("mapCourse").textContent = code;
   updateGuide();                       // refresh next-mark panel for the new course
 }
 
@@ -708,19 +804,22 @@ let diagramTx = null;   // saved projection so the live boat overlay lines up ex
 /* project any lat/lon to diagram px using the saved transform */
 function projXY(lat, lon){
   const t = diagramTx;
-  const x = (lon - MARKS.CM.lon)*60*t.k;
-  const y = (lat - MARKS.CM.lat)*60;
+  const x = (lon - ACTIVE_MARKS[ACTIVE_START].lon)*60*t.k;
+  const y = (lat - ACTIVE_MARKS[ACTIVE_START].lat)*60;
   return { x: t.PAD + (x - t.minX)*t.sc, y: t.H - t.PAD - (y - t.minY)*t.sc };
 }
 
 function drawDiagram(seqArr, targetId){
   const W=420, H=420, PAD=46;
-  const lat0 = MARKS.CM.lat, k = Math.cos(lat0*Math.PI/180);
+  const cm = ACTIVE_MARKS[ACTIVE_START];
+  const k = Math.cos(cm.lat*Math.PI/180);
   const pts = {};
   let xs=[], ys=[];
-  for(const m of Object.keys(MARKS)){
-    const x = (MARKS[m].lon - MARKS.CM.lon)*60*k;   // nm east
-    const y = (MARKS[m].lat - MARKS.CM.lat)*60;     // nm north
+  // plot every mark used by this course (custom courses only define the marks in play)
+  const usedKeys = Object.keys(ACTIVE_MARKS);
+  for(const m of usedKeys){
+    const x = (ACTIVE_MARKS[m].lon - cm.lon)*60*k;   // nm east
+    const y = (ACTIVE_MARKS[m].lat - cm.lat)*60;     // nm north
     pts[m]={x,y}; xs.push(x); ys.push(y);
   }
   const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
@@ -759,11 +858,12 @@ function drawDiagram(seqArr, targetId){
   }
 
   // marks
-  for(const m of Object.keys(MARKS)){
-    const x=px(m), y=py(m), isCM=m==="CM";
+  for(const m of usedKeys){
+    const x=px(m), y=py(m), isCM=m===ACTIVE_START;
     s += `<circle cx="${x}" cy="${y}" r="${isCM?12:11}" fill="${isCM?"#c2330a":"#0b1220"}"/>`;
     s += `<text x="${x}" y="${y+4.5}" font-size="${isCM?10:13}" font-weight="800" text-anchor="middle" fill="#fff">${m}</text>`;
-    if(!isCM) s += `<text x="${x}" y="${y-16}" font-size="11" text-anchor="middle" fill="#5b6472" font-weight="700">${MARKS[m].dir}</text>`;
+    const dir = ACTIVE_MARKS[m].dir;
+    if(!isCM && dir) s += `<text x="${x}" y="${y-16}" font-size="11" text-anchor="middle" fill="#5b6472" font-weight="700">${dir}</text>`;
   }
   s += `<g class="boatLayer"></g>`;   // live position drawn here on each GPS tick
   s += `</svg>`;
@@ -968,22 +1068,23 @@ function updateGuide(){
   // auto-detect rounding (unless the user has taken manual control)
   if(geo.lastPos && !geo.manual && geo.targetIdx < seq.length){
     const tgt = seq[geo.targetIdx];
-    if(distNm(geo.lastPos, MARKS[tgt]) < ROUND_NM && geo.targetIdx < seq.length-1) geo.targetIdx++;
+    if(distNm(geo.lastPos, ACTIVE_MARKS[tgt]) < ROUND_NM && geo.targetIdx < seq.length-1) geo.targetIdx++;
   }
   highlightLeg();
 
   if(geo.targetIdx >= seq.length){ $("gMark").textContent="Finished"; return; }
   const tgt = seq[geo.targetIdx], prev = seq[geo.targetIdx-1];
-  const legHdg = (HEADINGS[prev]||{})[tgt];
-  $("gMark").innerHTML = (tgt==="CM"?'<span style="color:var(--cm)">CM (finish)</span>':tgt) + ` &middot; ${MARKS[tgt].dir}`;
+  const legHdg = (ACTIVE_HEADINGS[prev]||{})[tgt];
+  const tgtDir = ACTIVE_MARKS[tgt].dir;
+  $("gMark").innerHTML = (tgt===ACTIVE_START?'<span style="color:var(--cm)">'+tgt+' (finish)</span>':tgt) + (tgtDir ? ` &middot; ${tgtDir}` : "");
   $("gLegHdg").textContent = legHdg ?? "—";
 
   // bearing/distance to mark need a GPS fix; before that, use the published leg heading
   let brg = null;
   if(geo.lastPos){
-    brg = bearingMag(geo.lastPos, MARKS[tgt]);
+    brg = bearingMag(geo.lastPos, ACTIVE_MARKS[tgt]);
     $("gBrg").textContent = String(Math.round(brg)%360).padStart(3,"0");
-    $("gDist").textContent = distNm(geo.lastPos, MARKS[tgt]).toFixed(2);
+    $("gDist").textContent = distNm(geo.lastPos, ACTIVE_MARKS[tgt]).toFixed(2);
   } else {
     $("gBrg").innerHTML = "&mdash;"; $("gDist").innerHTML = "&mdash;";
   }
@@ -1037,8 +1138,210 @@ function stepLeg(d){
   updateGuide();
 }
 
+/* ================= CUSTOM RACE ================= */
+
+function setMode(mode){
+  const custom = mode === "custom";
+  $("modeKyc").classList.toggle("sel", !custom);
+  $("modeCustom").classList.toggle("sel", custom);
+  $("kycPicker").style.display = custom ? "none" : "block";
+  $("customPicker").style.display = custom ? "block" : "none";
+  if(custom){
+    if(!$("markInputs").children.length) buildCustomForm();
+    $("result").style.display = "none";   // hide until Set Course
+  } else {
+    // restore the KYC course context and re-render the last KYC selection
+    ACTIVE_MARKS = MARKS; ACTIVE_HEADINGS = HEADINGS; ACTIVE_START = "CM"; ACTIVE_VAR = MAG_VAR;
+    state.custom = false; state.fam = lastKyc.fam; state.mark = lastKyc.mark; state.laps = lastKyc.laps;
+    $("windIn").value = "";
+    render();
+  }
+  track("mode_switch", { detail: mode });
+}
+
+function setCoordFmt(f){
+  coordFmt = f;
+  $("fmtDec").classList.toggle("sel", f === "dec");
+  $("fmtDM").classList.toggle("sel", f === "dm");
+  $("coordHint").innerHTML = f === "dec"
+    ? 'Decimal degrees, e.g. <b>40.4695</b> and <b>-74.2065</b> (minus = S/W).'
+    : 'Degrees + decimal minutes, e.g. <b>40 28.17 N</b> and <b>074 12.39 W</b>.';
+  // update placeholders
+  document.querySelectorAll("#markInputs .mkRow").forEach(r=>{
+    const la = r.querySelector(".latIn"), lo = r.querySelector(".lonIn");
+    if(f === "dec"){ la.placeholder = "40.4695"; lo.placeholder = "-74.2065"; }
+    else { la.placeholder = "40 28.17 N"; lo.placeholder = "074 12.39 W"; }
+  });
+}
+
+function buildCustomForm(){
+  const wrap = $("markInputs");
+  wrap.innerHTML = "";
+  const rows = [["S", "Start", true]];
+  for(let i=1;i<=6;i++) rows.push([String(i), "Mark " + i, false]);
+  rows.forEach(([key, label, isStart])=>{
+    const div = document.createElement("div");
+    div.className = "mkRow" + (isStart ? " startRow" : "");
+    div.innerHTML = `<span class="mkLbl">${label}</span>`+
+      `<input class="latIn" id="lat_${key}" type="text" inputmode="text" placeholder="40.4695" autocomplete="off">`+
+      `<input class="lonIn" id="lon_${key}" type="text" inputmode="text" placeholder="-74.2065" autocomplete="off">`;
+    wrap.appendChild(div);
+  });
+  // lap buttons for custom
+  const lb = $("cLapBtns");
+  lb.innerHTML = "";
+  [1,2,3,4].forEach(n=>{
+    const b = mkBtn(`${n}<small>lap${n>1?"s":""}</small>`, n===customLaps?"sel":"", ()=>{
+      customLaps = n;
+      document.querySelectorAll("#cLapBtns .opt").forEach(x=>x.classList.toggle("sel", +x.dataset.laps===n));
+    });
+    b.dataset.laps = n; lb.appendChild(b);
+  });
+}
+
+/* parse a coordinate string in decimal OR deg-decimal-min (or D M S); returns signed degrees or null */
+function parseCoord(raw){
+  if(raw == null) return null;
+  let s = String(raw).trim().toUpperCase();
+  if(!s) return null;
+  let hemi = 0;
+  const hm = s.match(/[NSEW]/);
+  if(hm){ const c = hm[0]; hemi = (c === "S" || c === "W") ? -1 : 1; s = s.replace(/[NSEW]/g, " "); }
+  s = s.replace(/[°'"′″]/g, " ").replace(/,/g, " ").trim();
+  const parts = s.split(/\s+/).map(parseFloat).filter(v=>!isNaN(v));
+  if(!parts.length) return null;
+  let val;
+  if(parts.length === 1){ val = parts[0]; }
+  else {
+    const deg = Math.abs(parts[0]), min = parts[1] || 0, sec = parts[2] || 0;
+    val = (deg + min/60 + sec/3600) * (parts[0] < 0 ? -1 : 1);
+  }
+  if(hemi) val = Math.abs(val) * hemi;     // explicit hemisphere wins
+  return val;
+}
+
+function fmtHdgStr(h){
+  const n = ((Math.round(h*10)/10) % 360 + 360) % 360;
+  return n.toFixed(1).padStart(5, "0");    // e.g. 045.0
+}
+
+/* full magnetic heading matrix between every pair of the given marks */
+function computeHeadingMatrix(marks){
+  const H = {}, keys = Object.keys(marks);
+  for(const f of keys){ H[f] = {}; for(const t of keys){ if(f !== t) H[f][t] = fmtHdgStr(bearingMag(marks[f], marks[t])); } }
+  return H;
+}
+
+function cmsg(text, isErr){ const e = $("cMsg"); e.textContent = text || ""; e.className = "cMsg" + (isErr ? " err" : ""); }
+
+function readCustomMarks(){
+  const sLat = parseCoord($("lat_S").value), sLon = parseCoord($("lon_S").value);
+  if(sLat == null || sLon == null){ cmsg("Enter the Start coordinates (Start = Finish).", true); return null; }
+  const marks = { S: { lat: sLat, lon: sLon, name: "Start", dir: "" } };
+  const order = [];
+  for(let i=1;i<=6;i++){
+    const la = parseCoord($("lat_"+i).value), lo = parseCoord($("lon_"+i).value);
+    if(la != null && lo != null){ marks[String(i)] = { lat: la, lon: lo, name: "Mark "+i, dir: "" }; order.push(String(i)); }
+  }
+  if(!order.length){ cmsg("Enter at least one mark between Start and Finish.", true); return null; }
+  return { marks, order };
+}
+
+function setCustomCourse(){
+  const parsed = readCustomMarks();
+  if(!parsed) return;
+  const v = parseFloat($("cVar").value);
+  ACTIVE_VAR = (isNaN(v) ? 14 : Math.abs(v)) * ($("cVarDir").value === "E" ? -1 : 1);
+  ACTIVE_MARKS = parsed.marks;
+  ACTIVE_START = "S";
+  ACTIVE_HEADINGS = computeHeadingMatrix(parsed.marks);
+
+  const fam = { code: "CUSTOM", name: ($("cRaceName").value.trim() || "Custom course"),
+                dist: "custom", laps: true, seq: {} };
+  fam.seq[parsed.order[0]] = parsed.order;     // per-lap sequence (keyed by first mark)
+  state.fam = fam; state.mark = parsed.order[0]; state.laps = customLaps; state.custom = true;
+  geo.seqArr = []; geo.targetIdx = 1; $("windIn").value = "";
+  render();
+  cmsg("Course set — see the heading table, the course map, and Map·Live.");
+  track("custom_set", { courseCode: "custom", detail: "marks="+parsed.order.length+"|laps="+customLaps });
+}
+
+/* ---------- shared (cloud) saved races ---------- */
+const RACE_CACHE = "kyc_races_cache";
+
+function customRacePayload(){
+  const parsed = readCustomMarks();
+  if(!parsed) return null;
+  const name = $("cRaceName").value.trim();
+  if(!name){ cmsg("Enter a Race name to save.", true); return null; }
+  const marks = Object.keys(parsed.marks).map(k=>({ k, lat: parsed.marks[k].lat, lon: parsed.marks[k].lon }));
+  return { name, marks, order: parsed.order, laps: customLaps,
+           variation: Math.abs(parseFloat($("cVar").value) || 14), varDir: $("cVarDir").value };
+}
+
+function saveCustomRace(){
+  const race = customRacePayload();
+  if(!race) return;
+  const url = CONFIG && CONFIG.analyticsUrl;
+  if(!url){ cmsg("Cloud not configured yet — can't save.", true); return; }
+  cmsg("Saving “" + race.name + "” …");
+  const q = url + "?action=save_race&race=" + encodeURIComponent(JSON.stringify(race)) +
+            "&by=" + encodeURIComponent(deviceId()) + "&ts=" + Date.now();
+  fetch(q).then(r=>r.json()).then(res=>{
+    if(res && res.ok){ cmsg("Saved “" + race.name + "” to shared races."); track("race_save", { detail: race.name }); }
+    else cmsg("Save failed: " + (res && res.error || "unknown"), true);
+  }).catch(()=>cmsg("Save failed — check your connection.", true));
+}
+
+function openRetrieve(){
+  const box = $("retrieveBox");
+  if(box.style.display === "block"){ box.style.display = "none"; return; }
+  box.style.display = "block";
+  box.innerHTML = "<div class='rmeta'>Loading saved races…</div>";
+  const url = CONFIG && CONFIG.analyticsUrl;
+  const render = (list)=>{
+    if(!list || !list.length){ box.innerHTML = "<div class='rmeta'>No saved races yet.</div>"; return; }
+    box.innerHTML = "";
+    list.slice().reverse().forEach(r=>{
+      const item = document.createElement("div");
+      item.className = "raceItem";
+      const when = r.savedAt ? (" · " + String(r.savedAt).slice(0,10)) : "";
+      item.innerHTML = `<span><span class="rn"></span><br><span class="rmeta">${(r.order?r.order.length:"?")} marks · ${r.laps||1} lap${(r.laps||1)>1?"s":""}${when}</span></span>`;
+      item.querySelector(".rn").textContent = r.name;
+      const b = document.createElement("button"); b.textContent = "Load";
+      b.addEventListener("click", ()=>loadRace(r));
+      item.appendChild(b);
+      box.appendChild(item);
+    });
+  };
+  if(!url){ try{ render(JSON.parse(localStorage.getItem(RACE_CACHE) || "[]")); }catch(e){ render([]); } return; }
+  fetch(url + "?action=list_races&ts=" + Date.now()).then(r=>r.json()).then(list=>{
+    localStorage.setItem(RACE_CACHE, JSON.stringify(list || []));
+    render(list);
+  }).catch(()=>{
+    try{ render(JSON.parse(localStorage.getItem(RACE_CACHE) || "[]")); }catch(e){ render([]); }
+  });
+  track("race_list");
+}
+
+function loadRace(r){
+  // populate the form from a saved race, then set the course
+  $("cRaceName").value = r.name || "";
+  customLaps = r.laps || 1;
+  $("cVar").value = r.variation != null ? r.variation : 14;
+  $("cVarDir").value = r.varDir || "W";
+  // clear all mark inputs
+  ["S","1","2","3","4","5","6"].forEach(k=>{ if($("lat_"+k)){ $("lat_"+k).value = ""; $("lon_"+k).value = ""; } });
+  (r.marks||[]).forEach(m=>{ if($("lat_"+m.k)){ $("lat_"+m.k).value = m.lat; $("lon_"+m.k).value = m.lon; } });
+  document.querySelectorAll("#cLapBtns .opt").forEach(x=>x.classList.toggle("sel", +x.dataset.laps===customLaps));
+  $("retrieveBox").style.display = "none";
+  setCoordFmt("dec");   // saved values are decimal
+  setCustomCourse();
+  track("race_load", { detail: r.name });
+}
+
 /* ================= ANALYTICS ================= */
-const APP_VERSION = "v6";
+const APP_VERSION = "v8";
 const DEV_KEY = "kyc_device", SES_NS = "kyc";
 const SESSION_ID = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "s"+Date.now()+"-"+Math.random().toString(16).slice(2);
 let ENV = null;
