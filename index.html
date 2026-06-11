@@ -129,9 +129,14 @@
   .mapDiagram{max-width:560px; margin:10px auto;}
   .mapDiagram svg{width:100%; height:auto; display:block; border:1px solid var(--line);
                   border-radius:12px; background:#fbfcfe;}
-  .offGrid{margin:10px auto 0; max-width:560px; padding:11px 13px; border-radius:10px;
-           background:#fff7e6; border:1px solid #f0d28a; color:#5a4a1a; font-size:13px; line-height:1.5;}
+  .mapNote{margin:10px auto 0; max-width:560px; padding:11px 13px; border-radius:10px;
+           font-size:13px; line-height:1.5;}
+  .offGrid{background:#fff7e6; border:1px solid #f0d28a; color:#5a4a1a;}
   .offGrid b{color:#3d3210;}
+  .gpsOffNote{background:#eef4fc; border:1px solid #c5d8f2; color:#27456f;}
+  .gpsOffNote b{color:#163a63;}
+  .gMarkLtr{color:var(--accent); font-weight:800;}
+  .gDir{font-weight:500; color:var(--muted); font-size:0.82em; white-space:nowrap;}
   .posbar{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:baseline; margin:8px 2px; font-size:15px;}
   .posbar .poslbl{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted);}
   .posbar #livePos{font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
@@ -485,7 +490,12 @@
       </div>
       <div id="mapDiagram" class="mapDiagram"></div>
 
-      <div id="offGrid" class="offGrid" style="display:none">
+      <div id="gpsOffNote" class="mapNote gpsOffNote" style="display:none">
+        <b>GPS is off.</b> Tap <b>Start GPS</b> (top-right) to plot your boat on the course.
+        Your boat only shows on the diagram while GPS is on.
+      </div>
+
+      <div id="offGrid" class="mapNote offGrid" style="display:none">
         <b>This is a to-scale course diagram, not a moving map.</b> Your boat appears on the
         grid only when you're near the selected marks.
         <br><br>
@@ -961,19 +971,25 @@ function drawBoatOverlay(){
   }
   layers.forEach(l=>l.innerHTML = s);
   applyMapZoom();
-  updateOffGridNote();
+  updateMapNotes();
 }
 
-/* Show the "you're away from the course" note only while GPS is on AND the boat
-   projects outside the course diagram (its dot is pinned to the canvas edge). */
-function updateOffGridNote(){
-  const el = $("offGrid"); if(!el) return;
-  let show = false;
-  if(geo.watchId != null && geo.lastPos && diagramTx){
+/* Map-page explainer notes (mutually exclusive):
+   - GPS off            -> "turn GPS on" hint
+   - GPS on, off-grid   -> "you're away from the course" explainer
+   - GPS on, on-grid    -> both hidden (boat is visible). */
+function updateMapNotes(){
+  const off = $("offGrid"), noGps = $("gpsOffNote");
+  if(!off || !noGps) return;
+  let showOff = false, showNoGps = false;
+  if(geo.watchId == null){
+    showNoGps = true;                                  // GPS not running
+  } else if(geo.lastPos && diagramTx){
     const q = projXY(geo.lastPos.lat, geo.lastPos.lon);
-    if(q.x < 0 || q.x > diagramTx.W || q.y < 0 || q.y > diagramTx.H) show = true;
+    if(q.x < 0 || q.x > diagramTx.W || q.y < 0 || q.y > diagramTx.H) showOff = true;
   }
-  el.style.display = show ? "block" : "none";
+  noGps.style.display = showNoGps ? "block" : "none";
+  off.style.display   = showOff   ? "block" : "none";
 }
 
 /* zoom/pan the live map's viewBox to follow the boat (map page only) */
@@ -1034,6 +1050,7 @@ function toggleGps(){
   $("gpsBtn").textContent = "Stop GPS";
   $("gpsBtn").classList.add("on");
   updateGuide();        // reveal next-mark panel
+  updateMapNotes();     // clear the "turn GPS on" hint
   goPage(1);            // jump to the live map page when GPS starts
   // analytics: start a GPS session
   geo.gpsStart = Date.now(); geo.maxSog = 0; geo.startTrackIdx = geo.track.length; geo.lastPing = 0;
@@ -1062,7 +1079,7 @@ function stopGps(){
   $("gpsBtn").textContent = "Start GPS";
   $("gpsBtn").classList.remove("on");
   setGpsStatus("GPS off");
-  updateOffGridNote();   // hide the off-grid note
+  updateMapNotes();      // show the "turn GPS on" hint
 }
 
 function onGpsErr(e){
@@ -1150,11 +1167,16 @@ function updateGuide(){
   if(geo.targetIdx >= seq.length){ $("gMark").textContent="Finished"; return; }
   const tgt = seq[geo.targetIdx], prev = seq[geo.targetIdx-1];
   const legHdg = (ACTIVE_HEADINGS[prev]||{})[tgt];
-  const tgtDir = ACTIVE_MARKS[tgt].dir;
+  const tgtDir = ACTIVE_MARKS[tgt].dir;            // compass abbrev, e.g. "E"
+  const dirName = ACTIVE_MARKS[tgt].name;          // full word, e.g. "East" (avoids E=mark vs E=east)
+  const isSF = (tgt===ACTIVE_START || tgt===ACTIVE_FINISH);
   const lastTarget = (geo.targetIdx === seq.length-1);
-  $("gMark").innerHTML = ((tgt===ACTIVE_START || tgt===ACTIVE_FINISH)
-      ? '<span style="color:var(--cm)">'+tgt+(lastTarget?' (finish)':'')+'</span>'
-      : tgt) + (tgtDir ? ` &middot; ${tgtDir}` : "");
+  let mk = isSF
+    ? '<span style="color:var(--cm)">'+tgt+(lastTarget?' (finish)':' (start/finish)')+'</span>'
+    : '<span class="gMarkLtr">'+tgt+'</span>';
+  // direction shown as a clearly-secondary label so it can't be mistaken for another mark
+  if(!isSF && tgtDir) mk += ' <span class="gDir">(the '+dirName+' mark)</span>';
+  $("gMark").innerHTML = mk;
   $("gLegHdg").textContent = legHdg ?? "—";
 
   // bearing/distance to mark need a GPS fix; before that, use the published leg heading
