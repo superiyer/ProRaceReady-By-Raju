@@ -1,24 +1,24 @@
 /**
- * KYC Race Ready — reporting / stats.
+ * KYC Race Ready - reporting / stats.
  *
  * Add this to the SAME Apps Script project as your doPost (paste it below the
  * doPost code, or use the + to add a new script file and paste it there), then
- * Save. Reload the spreadsheet once; a "📊 KYC Reports" menu appears. Click
+ * Save. Reload the spreadsheet once; a "KYC Reports" menu appears. Click
  * "Refresh reports" to (re)build the summary tabs. No deployment needed.
  *
  * It reads the "events" tab (the live log) and writes/refreshes these tabs:
- *   Dashboard  — headline totals
- *   By User    — one row per unique device (first/last used, time used, etc.)
- *   By Day     — daily sessions / users / distance
- *   Courses    — which courses get picked, by how many users
- *   Devices    — browser / OS / device-type breakdown
+ *   Dashboard  - headline totals
+ *   By User    - one row per unique device (first/last used, time used, etc.)
+ *   By Day     - daily sessions / users / distance
+ *   Courses    - which courses get picked, by how many users
+ *   Devices    - browser / OS / device-type breakdown
  *
  * Works with the current logging schema (15 columns, last column = full JSON).
  */
 
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu("📊 KYC Reports")
+    .createMenu("KYC Reports")
     .addItem("Refresh reports", "buildReports")
     .addToUi();
 }
@@ -147,8 +147,8 @@ function buildReports() {
     ["Total time on water", fmtDur_(waterTotal)],
     ["Max SOG observed (kt)", round_(maxSogGlobal, 1)],
     ["", ""],
-    ["Most-picked course", topCourse ? (topCourse + " (" + topN + "x)") : "—"],
-    ["Code entries — pass / fail", codePass + " / " + codeFail],
+    ["Most-picked course", topCourse ? (topCourse + " (" + topN + "x)") : "-"],
+    ["Code entries - pass / fail", codePass + " / " + codeFail],
     ["Opened as installed app / browser", standaloneYes + " / " + standaloneNo]
   ];
   writeKV_(ss, "Dashboard", dash);
@@ -202,14 +202,14 @@ function buildReports() {
     inc_(byOS, users[dk].os || "?");
   }
   var devRows = [];
-  devRows.push(["— Device type —", ""]); pushCounts_(devRows, byType);
-  devRows.push(["", ""]); devRows.push(["— Browser —", ""]); pushCounts_(devRows, byBrowser);
-  devRows.push(["", ""]); devRows.push(["— OS —", ""]); pushCounts_(devRows, byOS);
+  devRows.push(["- Device type -", ""]); pushCounts_(devRows, byType);
+  devRows.push(["", ""]); devRows.push(["- Browser -", ""]); pushCounts_(devRows, byBrowser);
+  devRows.push(["", ""]); devRows.push(["- OS -", ""]); pushCounts_(devRows, byOS);
   writeTable_(ss, "Devices", ["Category", "Unique users"], devRows);
 
   buildCharts_(ss);
 
-  ss.toast("Reports refreshed — " + events.length + " events, " + uniqueUsers + " users.", "📊 KYC Reports", 6);
+  ss.toast("Reports refreshed - " + events.length + " events, " + uniqueUsers + " users.", "KYC Reports", 6);
 }
 
 /* Embed charts on the Dashboard tab (rebuilt each refresh). */
@@ -219,7 +219,7 @@ function buildCharts_(ss) {
   var existing = dash.getCharts();
   for (var i = 0; i < existing.length; i++) dash.removeChart(existing[i]);
 
-  // Sessions & unique users per day (column chart) — from "By Day" cols Date, Sessions, Unique users
+  // Sessions & unique users per day (column chart) - from "By Day" cols Date, Sessions, Unique users
   var byDay = ss.getSheetByName("By Day");
   if (byDay && byDay.getLastRow() >= 2) {
     var rng = byDay.getRange(1, 1, byDay.getLastRow(), 3);
@@ -234,7 +234,7 @@ function buildCharts_(ss) {
     dash.insertChart(ch1);
   }
 
-  // Course popularity (bar chart) — from "Courses" cols Course, Times picked
+  // Course popularity (bar chart) - from "Courses" cols Course, Times picked
   var crs = ss.getSheetByName("Courses");
   if (crs && crs.getLastRow() >= 2) {
     var rng2 = crs.getRange(1, 1, crs.getLastRow(), 2);
