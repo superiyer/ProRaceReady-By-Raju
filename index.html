@@ -45,6 +45,8 @@
   .gateMsg{min-height:18px; margin-top:8px; font-size:14px; font-weight:700; color:var(--warn);}
   .gateBusy{margin-top:8px; font-size:14px; color:var(--muted);}
   .splashPriv{margin-top:14px; font-size:11.5px; color:var(--muted); line-height:1.4;}
+  .splashDisc{margin-top:8px; font-size:11.5px; color:var(--ink); line-height:1.4;
+              border-top:1px solid var(--line); padding-top:8px;}
   body.unlocked .splash{display:none;}
   /* ---- swipeable pager ---- */
   .topbar{position:sticky; top:0; z-index:30; display:flex; align-items:center;
@@ -191,6 +193,7 @@
   footer{margin-top:26px; color:var(--muted); font-size:13px;}
   .raceRule{color:var(--ink); font-size:15px; font-weight:600; border-top:2px solid var(--ink);
             padding-top:10px; margin-bottom:8px;}
+  .discl{display:block; color:var(--ink); font-weight:600;}
   /* ---- live GPS ---- */
   #live{margin:14px 0 4px;}
   .liveBar{display:flex; align-items:center; gap:12px;}
@@ -284,6 +287,10 @@
     <div id="gateBusy" class="gateBusy">Loading…</div>
     <div class="splashPriv">By entering you agree this app may record anonymous usage and,
       while GPS is on, basic sailing data (speed, course, position) to help improve it.</div>
+    <div class="splashDisc">By using this application you agree to do so entirely at your own risk.
+      The developer is not responsible for any errors in courses, any impact on race results from
+      using the application, or any mishaps or damages caused to the user or others.
+      <b>NO LIABILITY OF ANY SORT WILL BE ENFORCEABLE ON THE DEVELOPER.</b></div>
   </div>
 </div>
 
@@ -400,6 +407,11 @@
         next-mark guidance. SOG/COG can read &mdash; until the phone is moving, and phone GPS is jumpy at
         low speed. GPS needs the app served over <b>https://</b> (the hosted version) and location
         permission &mdash; it is blocked when opening the file directly.
+        <br><br>
+        <span class="discl">Disclaimer: Use this application entirely at your own risk. The developer is
+        not responsible for any errors in courses, any impact on race results from using the application,
+        or any mishaps or damages caused to the user or others.
+        <b>NO LIABILITY OF ANY SORT WILL BE ENFORCEABLE ON THE DEVELOPER.</b></span>
       </footer>
     </section>
 
@@ -453,7 +465,7 @@
         <span id="acc"></span>
       </div>
       <div class="maphint">Boat shows as a green dot with a heading arrow; your track trails behind.
-      Swipe right or tap <b>Course</b> to return to the heading table.</div>
+      Swipe left or tap <b>Course</b> to return to the heading table.</div>
     </section>
 
   </div>
@@ -1478,7 +1490,7 @@ async function submitCode(){
   }catch(e){}
   track("code_attempt", { detail: ok ? "pass" : "fail" });
   if(ok){ authorize("entered"); }
-  else { $("gateMsg").textContent = "Incorrect code. Check with the race committee."; $("codeIn").value = ""; }
+  else { $("gateMsg").textContent = "Incorrect code. Please contact Raju Venkatraman."; $("codeIn").value = ""; }
 }
 
 function authorize(via){
