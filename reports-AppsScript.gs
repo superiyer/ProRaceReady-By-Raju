@@ -20,7 +20,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("📊 KYC Reports")
     .addItem("Refresh reports", "buildReports")
-    .addToParent();
+    .addToUi();
 }
 
 function buildReports() {
