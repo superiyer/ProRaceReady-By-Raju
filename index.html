@@ -217,6 +217,15 @@
     .brandLogo{height:58px; width:58px;}
     .brand{gap:11px;}
   }
+  /* Tablet / desktop landscape (e.g. iPad landscape): show Course and Map side-by-side
+     instead of swiping. Each column scrolls independently. */
+  @media (min-width:900px) and (min-height:680px){
+    .wrap{max-width:1180px;}
+    .tabs{display:none;}                       /* no page-switching needed */
+    .topbar{justify-content:flex-end;}         /* GPS button to the right */
+    .pager{overflow:visible; scroll-snap-type:none; gap:22px;}
+    .page{flex:1 1 0; width:auto; min-width:0; scroll-snap-align:none;}
+  }
   tr.lapline td{border-bottom:2px dashed var(--accent);}
   .tag{display:block; font-size:12.5px; font-weight:700; letter-spacing:.3px; margin-top:2px;}
   .tag.port{color:var(--accent);}
@@ -1644,13 +1653,16 @@ function detectOS(ua){
 }
 function collectEnv(){
   const ua = navigator.userAgent || "";
-  const phone = /Mobi|iPhone|iPod|Android.*Mobile/.test(ua);
-  const tablet = /iPad|Tablet|Android(?!.*Mobile)/.test(ua);
+  const touch = navigator.maxTouchPoints || 0;
+  // iPadOS Safari reports a desktop "Macintosh" UA — detect it via touch points.
+  const isIpad = /iPad/.test(ua) || (/Macintosh/.test(ua) && touch > 1);
+  const phone = /Mobi|iPhone|iPod|Android.*Mobile/.test(ua) && !isIpad;
+  const tablet = isIpad || /Tablet|Android(?!.*Mobile)/.test(ua);
   let net = "";
   try{ net = (navigator.connection && navigator.connection.effectiveType) || ""; }catch(e){}
   return {
     browser: detectBrowser(ua),
-    os: detectOS(ua),
+    os: isIpad ? "iPadOS" : detectOS(ua),
     deviceType: phone ? "phone" : (tablet ? "tablet" : "desktop"),
     screen: screen.width + "x" + screen.height,
     viewport: window.innerWidth + "x" + window.innerHeight,
