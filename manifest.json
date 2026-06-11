@@ -1,7 +1,7 @@
 {
-  "name": "KYC Race Ready!",
-  "short_name": "Race Ready",
-  "description": "KYC race course headings and live GPS racing aid — Olympic circle, marks A–H.",
+  "name": "Pro Race Ready",
+  "short_name": "Pro Race Ready",
+  "description": "Race course headings and live GPS racing aid — preset and custom courses.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

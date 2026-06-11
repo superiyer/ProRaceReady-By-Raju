@@ -1,10 +1,10 @@
-/* KYC Race Ready — offline cache. Bump CACHE version when files change. */
-const CACHE = "wnr-v8";
+/* Pro Race Ready — offline cache. Bump CACHE version when files change. */
+const CACHE = "wnr-v9";
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./keyport-masthead.jpg",
+  "./pro-race-ready-logo.jpg",
   "./icon-192.png",
   "./icon-512.png",
   "./icon-180.png"
