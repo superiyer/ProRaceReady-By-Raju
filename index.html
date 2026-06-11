@@ -1282,8 +1282,8 @@ function drawWindCompass(){
     const ang=(w-90)*Math.PI/180;
     const tip = scr(w, R-6), tail = scr((w+180)%360, R-16);
     s += `<line x1="${tail.x.toFixed(1)}" y1="${tail.y.toFixed(1)}" x2="${tip.x.toFixed(1)}" y2="${tip.y.toFixed(1)}" stroke="#ffd54a" stroke-width="3.2" stroke-linecap="round"/>`;
-    const a1=ang+Math.PI-0.42, a2=ang+Math.PI+0.42, AL=8;
-    s += `<path d="M${tip.x.toFixed(1)},${tip.y.toFixed(1)} L${(tip.x+AL*Math.cos(a1)).toFixed(1)},${(tip.y+AL*Math.sin(a1)).toFixed(1)} L${(tip.x+AL*Math.cos(a2)).toFixed(1)},${(tip.y+AL*Math.sin(a2)).toFixed(1)} z" fill="#ffd54a"/>`;
+    const a1=ang+Math.PI-0.42, a2=ang+Math.PI+0.42, AL=11;
+    s += `<path d="M${tip.x.toFixed(1)},${tip.y.toFixed(1)} L${(tip.x+AL*Math.cos(a1)).toFixed(1)},${(tip.y+AL*Math.sin(a1)).toFixed(1)} L${(tip.x+AL*Math.cos(a2)).toFixed(1)},${(tip.y+AL*Math.sin(a2)).toFixed(1)} z" fill="#ffffff" stroke="#0b1220" stroke-width="0.6"/>`;
     s += `<circle cx="50" cy="50" r="2.6" fill="#ffd54a"/>`;
   }
   s += `</svg>`;
