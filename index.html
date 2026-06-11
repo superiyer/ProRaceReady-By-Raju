@@ -129,6 +129,9 @@
   .mapDiagram{max-width:560px; margin:10px auto;}
   .mapDiagram svg{width:100%; height:auto; display:block; border:1px solid var(--line);
                   border-radius:12px; background:#fbfcfe;}
+  .offGrid{margin:10px auto 0; max-width:560px; padding:11px 13px; border-radius:10px;
+           background:#fff7e6; border:1px solid #f0d28a; color:#5a4a1a; font-size:13px; line-height:1.5;}
+  .offGrid b{color:#3d3210;}
   .posbar{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:baseline; margin:8px 2px; font-size:15px;}
   .posbar .poslbl{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted);}
   .posbar #livePos{font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
@@ -481,6 +484,14 @@
         <button onclick="clearTrack()">Clear track</button>
       </div>
       <div id="mapDiagram" class="mapDiagram"></div>
+
+      <div id="offGrid" class="offGrid" style="display:none">
+        <b>This is a to-scale course diagram, not a moving map.</b> Your boat appears on the
+        grid only when you're near the selected marks.
+        <br><br>
+        GPS is still working &mdash; your live position, speed (SOG) and heading (COG) are
+        shown above. The boat will draw itself once you reach the course area.
+      </div>
 
       <div class="posbar">
         <span class="poslbl">Position</span>
@@ -950,6 +961,19 @@ function drawBoatOverlay(){
   }
   layers.forEach(l=>l.innerHTML = s);
   applyMapZoom();
+  updateOffGridNote();
+}
+
+/* Show the "you're away from the course" note only while GPS is on AND the boat
+   projects outside the course diagram (its dot is pinned to the canvas edge). */
+function updateOffGridNote(){
+  const el = $("offGrid"); if(!el) return;
+  let show = false;
+  if(geo.watchId != null && geo.lastPos && diagramTx){
+    const q = projXY(geo.lastPos.lat, geo.lastPos.lon);
+    if(q.x < 0 || q.x > diagramTx.W || q.y < 0 || q.y > diagramTx.H) show = true;
+  }
+  el.style.display = show ? "block" : "none";
 }
 
 /* zoom/pan the live map's viewBox to follow the boat (map page only) */
@@ -1038,6 +1062,7 @@ function stopGps(){
   $("gpsBtn").textContent = "Start GPS";
   $("gpsBtn").classList.remove("on");
   setGpsStatus("GPS off");
+  updateOffGridNote();   // hide the off-grid note
 }
 
 function onGpsErr(e){
