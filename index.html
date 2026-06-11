@@ -533,7 +533,10 @@
         <span id="livePos">&mdash;</span>
         <span id="acc"></span>
       </div>
-      <div class="maphint">Boat shows as a green dot with a heading arrow; your track trails behind.</div>
+      <div class="maphint">Boat shows as a green dot with a heading arrow; your track trails behind.
+      The <span style="color:#c026d3;font-weight:800">magenta dotted line</span> is the most efficient
+      path to the next mark for the entered wind &mdash; with a tack (<b>T</b>) when beating or a gybe
+      (<b>G</b>) when running. Set the wind above for it to appear.</div>
 
       <footer>
         <span class="discl">User Agreement: Use of this application is at your own risk. The developer
@@ -980,6 +983,58 @@ function drawDiagram(seqArr, targetId){
   drawBoatOverlay();                  // re-draw boat if GPS already running
 }
 
+/* Most-efficient path from the boat to the next mark given the wind:
+   straight when you can fetch it, a single tack (beat) or single gybe (run)
+   to the layline otherwise. Returns an SVG string in the map's px space. */
+function buildRouteSvg(){
+  if(!diagramTx || !geo.lastPos) return "";
+  const seq = geo.seqArr;
+  if(!seq.length || geo.targetIdx >= seq.length) return "";
+  const wMag = getWind(); if(wMag == null) return "";
+  const tgt = ACTIVE_MARKS[seq[geo.targetIdx]];
+  const B = projXY(geo.lastPos.lat, geo.lastPos.lon);
+  const M = projXY(tgt.lat, tgt.lon);
+  // only meaningful while the boat is actually on the diagram
+  if(B.x<0 || B.x>diagramTx.W || B.y<0 || B.y>diagramTx.H) return "";
+
+  const wTrue = norm360(wMag - ACTIVE_VAR);                 // canvas is true north-up
+  const tac = computeTactics(bearingMag(geo.lastPos, tgt), wMag);
+  const beta = TAC.upwind, off = 180 - TAC.downwind;
+  const dir = b => ({ x:Math.sin(b*Math.PI/180), y:-Math.cos(b*Math.PI/180) });
+  // intersect leg1 (from B, course c1) with leg2 (into M, course c2): one tack/gybe
+  function oneTurn(c1, c2){
+    const u1=dir(c1), u2=dir(c2), det=u1.x*u2.y - u1.y*u2.x;
+    if(Math.abs(det) < 1e-6) return null;
+    const rx=M.x-B.x, ry=M.y-B.y;
+    const t1=(rx*u2.y - ry*u2.x)/det, s2=(u1.x*ry - u1.y*rx)/det;
+    if(t1 < -0.5 || s2 < -0.5) return null;                 // turn point behind boat/mark
+    if(t1 > 6*diagramTx.W || s2 > 6*diagramTx.W) return null; // absurdly long -> bail
+    return { x:B.x+t1*u1.x, y:B.y+t1*u1.y };
+  }
+
+  let pts = [B], turn = null;
+  if(tac && (tac.mode === "beat" || tac.mode === "run")){
+    const base = tac.mode === "beat"
+      ? [norm360(wTrue-beta),      norm360(wTrue+beta)]      // close-hauled courses (true)
+      : [norm360(wTrue+180-off),   norm360(wTrue+180+off)];  // broad-reach gybe courses (true)
+    const favTrue = norm360(tac.targetHdg - ACTIVE_VAR);     // favored tack first
+    const order = Math.abs(angleDiff(base[0],favTrue)) <= Math.abs(angleDiff(base[1],favTrue))
+                ? base : [base[1], base[0]];
+    const P = oneTurn(order[0], order[1]) || oneTurn(order[1], order[0]);
+    if(P){ pts.push(P); turn = tac.mode === "beat" ? "T" : "G"; }
+  }
+  pts.push(M);
+
+  const path = pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  let s = `<polyline points="${path}" fill="none" stroke="#c026d3" stroke-width="2.6" stroke-dasharray="1.5 5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(turn){
+    const P = pts[1];
+    s += `<circle cx="${P.x.toFixed(1)}" cy="${P.y.toFixed(1)}" r="7" fill="#fff" stroke="#c026d3" stroke-width="2"/>`;
+    s += `<text x="${P.x.toFixed(1)}" y="${(P.y+3.4).toFixed(1)}" font-size="9.5" font-weight="800" text-anchor="middle" fill="#c026d3">${turn}</text>`;
+  }
+  return s;
+}
+
 /* draw track trail + boat + COG arrow into EVERY diagram's overlay layer */
 function drawBoatOverlay(){
   if(!diagramTx) return;
@@ -1007,7 +1062,9 @@ function drawBoatOverlay(){
     s += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="7" fill="#0a6e3a" stroke="#fff" stroke-width="2.5"/>`;
     s += `<text class="boatlbl" x="${(cx+10).toFixed(1)}" y="${(cy-9).toFixed(1)}" fill="#0a6e3a">YOU</text>`;
   }
-  layers.forEach(l=>l.innerHTML = s);
+  // efficient wind route only on the live map (not the small course-page diagram)
+  const routeSvg = buildRouteSvg();
+  layers.forEach(l=>{ l.innerHTML = (l.closest("#mapDiagram") ? routeSvg : "") + s; });
   applyMapZoom();
   updateMapNotes();
 }
@@ -1064,6 +1121,7 @@ function useNominalWind(){
   if(geo.nominalWind == null) return;
   $("windIn").value = geo.nominalWind;
   updateGuide();
+  drawBoatOverlay();        // redraw route for the new wind
   track("use_nominal", { detail: String(geo.nominalWind) });
 }
 
@@ -1303,6 +1361,7 @@ function stepLeg(d){
   geo.manual = true;
   geo.targetIdx = Math.max(1, Math.min(geo.seqArr.length-1, geo.targetIdx + d));
   updateGuide();
+  drawBoatOverlay();        // redraw the efficient route to the new target
 }
 
 /* ================= CUSTOM RACE ================= */
@@ -1726,8 +1785,8 @@ function goPage(i){
   }, { passive:true });
 })();
 
-// recompute tactics live as the wind value is edited
-$("windIn").addEventListener("input", updateGuide);
+// recompute tactics + efficient route live as the wind value is edited
+$("windIn").addEventListener("input", ()=>{ updateGuide(); drawBoatOverlay(); });
 // log wind changes (on commit, not every keystroke)
 $("windIn").addEventListener("change", ()=>{ if(AUTHORIZED) track("wind_set", { detail: $("windIn").value }); });
 
