@@ -1172,7 +1172,7 @@ function updateGuide(){
     ? '<span style="color:var(--cm)">'+tgt+(lastTarget?' (finish)':' (start/finish)')+'</span>'
     : '<span class="gMarkLtr">'+tgt+'</span>';
   // direction shown as a clearly-secondary label so it can't be mistaken for another mark
-  if(!isSF && tgtDir) mk += ' <span class="gDir">(the '+dirName+' mark)</span>';
+  if(!isSF && tgtDir) mk += ' <span class="gDir">('+dirName+')</span>';
   $("gMark").innerHTML = mk;
   $("gLegHdg").textContent = legHdg ?? "—";
 
