@@ -584,7 +584,7 @@ function bearingMag(p, q){ return trueToMag(trueBrg(p, q)); }
 
 /* Active course context — swapped between the KYC data and a user-entered custom
    course. Defaults to the KYC data, so KYC mode behaves exactly as before. */
-let ACTIVE_MARKS = MARKS, ACTIVE_HEADINGS = HEADINGS, ACTIVE_START = "CM", ACTIVE_VAR = MAG_VAR;
+let ACTIVE_MARKS = MARKS, ACTIVE_HEADINGS = HEADINGS, ACTIVE_START = "CM", ACTIVE_FINISH = "CM", ACTIVE_VAR = MAG_VAR;
 
 /* signed smallest angle a->b in (-180,180]; +ve means b is clockwise of a */
 function angleDiff(a, b){ return ((b - a + 540) % 360) - 180; }
@@ -637,8 +637,8 @@ function fullSequence(family, mark, laps){
   const lap = family.seq[mark];
   const n = family.laps ? laps : 1;
   const out = [ACTIVE_START];
-  for(let i=0;i<n;i++){ out.push(...lap, ACTIVE_START); }
-  return out;
+  for(let i=0;i<n;i++){ out.push(...lap, i === n-1 ? ACTIVE_FINISH : ACTIVE_START); }
+  return out;   // ACTIVE_FINISH === ACTIVE_START for KYC, so unchanged there
 }
 
 function courseCode(family, mark, laps){
@@ -651,10 +651,11 @@ function buildLegs(seqArr){
   for(let i=0;i<seqArr.length-1;i++){
     const from = seqArr[i], to = seqArr[i+1];
     const heading = (ACTIVE_HEADINGS[from]||{})[to];
+    const isLast = (i+1 === seqArr.length-1);
     legs.push({
       from, to, heading,
       dist: distNm(ACTIVE_MARKS[from], ACTIVE_MARKS[to]),
-      toCM: to===ACTIVE_START ? (i+1===seqArr.length-1 ? "finish" : "mid") : null,
+      toCM: (isLast && to===ACTIVE_FINISH) ? "finish" : (to===ACTIVE_START ? "mid" : null),
     });
   }
   return legs;
@@ -690,6 +691,7 @@ const state = { fam: FAMILIES[0], mark: "A", laps: 1, custom: false };
 let lastKyc = { fam: FAMILIES[0], mark: "A", laps: 1 };   // remembered KYC selection
 let coordFmt = "dec";                                     // 'dec' | 'dm'
 let customLaps = 1;
+let customFinishEdited = false;                           // true once user edits Finish
 
 /* live GPS state */
 const geo = {
@@ -741,7 +743,7 @@ function fmtPos(m){
          `${String(lo.d).padStart(3,"0")}&deg;${lo.min}&prime; ${p.lon<0?"W":"E"}`;
 }
 
-function markHtml(m){ return m===ACTIVE_START ? '<span class="cm">'+m+'</span>' : m; }
+function markHtml(m){ return (m===ACTIVE_START || m===ACTIVE_FINISH) ? '<span class="cm">'+m+'</span>' : m; }
 
 function render(){
   if(!state.custom) lastKyc = { fam: state.fam, mark: state.mark, laps: state.laps };
@@ -1102,7 +1104,10 @@ function updateGuide(){
   const tgt = seq[geo.targetIdx], prev = seq[geo.targetIdx-1];
   const legHdg = (ACTIVE_HEADINGS[prev]||{})[tgt];
   const tgtDir = ACTIVE_MARKS[tgt].dir;
-  $("gMark").innerHTML = (tgt===ACTIVE_START?'<span style="color:var(--cm)">'+tgt+' (finish)</span>':tgt) + (tgtDir ? ` &middot; ${tgtDir}` : "");
+  const lastTarget = (geo.targetIdx === seq.length-1);
+  $("gMark").innerHTML = ((tgt===ACTIVE_START || tgt===ACTIVE_FINISH)
+      ? '<span style="color:var(--cm)">'+tgt+(lastTarget?' (finish)':'')+'</span>'
+      : tgt) + (tgtDir ? ` &middot; ${tgtDir}` : "");
   $("gLegHdg").textContent = legHdg ?? "—";
 
   // bearing/distance to mark need a GPS fix; before that, use the published leg heading
@@ -1177,7 +1182,7 @@ function setMode(mode){
     $("result").style.display = "none";   // hide until Set Course
   } else {
     // restore the KYC course context and re-render the last KYC selection
-    ACTIVE_MARKS = MARKS; ACTIVE_HEADINGS = HEADINGS; ACTIVE_START = "CM"; ACTIVE_VAR = MAG_VAR;
+    ACTIVE_MARKS = MARKS; ACTIVE_HEADINGS = HEADINGS; ACTIVE_START = "CM"; ACTIVE_FINISH = "CM"; ACTIVE_VAR = MAG_VAR;
     state.custom = false; state.fam = lastKyc.fam; state.mark = lastKyc.mark; state.laps = lastKyc.laps;
     $("windIn").value = "";
     render();
@@ -1203,16 +1208,24 @@ function setCoordFmt(f){
 function buildCustomForm(){
   const wrap = $("markInputs");
   wrap.innerHTML = "";
-  const rows = [["S", "Start", true]];
-  for(let i=1;i<=6;i++) rows.push([String(i), "Mark " + i, false]);
-  rows.forEach(([key, label, isStart])=>{
+  customFinishEdited = false;
+  const rows = [["S", "Start", "start"]];
+  for(let i=1;i<=6;i++) rows.push([String(i), "Mark " + i, ""]);
+  rows.push(["F", "Finish", "start"]);            // 8 total: Start + 6 + Finish
+  rows.forEach(([key, label, cls])=>{
     const div = document.createElement("div");
-    div.className = "mkRow" + (isStart ? " startRow" : "");
+    div.className = "mkRow" + (cls ? " startRow" : "");
     div.innerHTML = `<span class="mkLbl">${label}</span>`+
       `<input class="latIn" id="lat_${key}" type="text" inputmode="text" placeholder="40.4695" autocomplete="off">`+
       `<input class="lonIn" id="lon_${key}" type="text" inputmode="text" placeholder="-74.2065" autocomplete="off">`;
     wrap.appendChild(div);
   });
+  // Finish defaults to Start until the user edits it
+  const mirror = ()=>{ if(!customFinishEdited){ $("lat_F").value = $("lat_S").value; $("lon_F").value = $("lon_S").value; } };
+  $("lat_S").addEventListener("input", mirror);
+  $("lon_S").addEventListener("input", mirror);
+  $("lat_F").addEventListener("input", ()=>{ customFinishEdited = true; });
+  $("lon_F").addEventListener("input", ()=>{ customFinishEdited = true; });
   // lap buttons for custom
   const lb = $("cLapBtns");
   lb.innerHTML = "";
@@ -1262,7 +1275,7 @@ function cmsg(text, isErr){ const e = $("cMsg"); e.textContent = text || ""; e.c
 
 function readCustomMarks(){
   const sLat = parseCoord($("lat_S").value), sLon = parseCoord($("lon_S").value);
-  if(sLat == null || sLon == null){ cmsg("Enter the Start coordinates (Start = Finish).", true); return null; }
+  if(sLat == null || sLon == null){ cmsg("Enter the Start coordinates.", true); return null; }
   const marks = { S: { lat: sLat, lon: sLon, name: "Start", dir: "" } };
   const order = [];
   for(let i=1;i<=6;i++){
@@ -1270,6 +1283,10 @@ function readCustomMarks(){
     if(la != null && lo != null){ marks[String(i)] = { lat: la, lon: lo, name: "Mark "+i, dir: "" }; order.push(String(i)); }
   }
   if(!order.length){ cmsg("Enter at least one mark between Start and Finish.", true); return null; }
+  // Finish: use entered value, else default to Start
+  let fLat = parseCoord($("lat_F").value), fLon = parseCoord($("lon_F").value);
+  if(fLat == null || fLon == null){ fLat = sLat; fLon = sLon; }
+  marks.F = { lat: fLat, lon: fLon, name: "Finish", dir: "" };
   return { marks, order };
 }
 
@@ -1280,6 +1297,7 @@ function setCustomCourse(){
   ACTIVE_VAR = (isNaN(v) ? 14 : Math.abs(v)) * ($("cVarDir").value === "E" ? -1 : 1);
   ACTIVE_MARKS = parsed.marks;
   ACTIVE_START = "S";
+  ACTIVE_FINISH = "F";
   ACTIVE_HEADINGS = computeHeadingMatrix(parsed.marks);
 
   const fam = { code: "CUSTOM", name: ($("cRaceName").value.trim() || "Custom course"),
@@ -1356,9 +1374,10 @@ function loadRace(r){
   customLaps = r.laps || 1;
   $("cVar").value = r.variation != null ? r.variation : 14;
   $("cVarDir").value = r.varDir || "W";
-  // clear all mark inputs
-  ["S","1","2","3","4","5","6"].forEach(k=>{ if($("lat_"+k)){ $("lat_"+k).value = ""; $("lon_"+k).value = ""; } });
-  (r.marks||[]).forEach(m=>{ if($("lat_"+m.k)){ $("lat_"+m.k).value = m.lat; $("lon_"+m.k).value = m.lon; } });
+  // clear all mark inputs, then fill from the saved race
+  ["S","1","2","3","4","5","6","F"].forEach(k=>{ if($("lat_"+k)){ $("lat_"+k).value = ""; $("lon_"+k).value = ""; } });
+  customFinishEdited = false;
+  (r.marks||[]).forEach(m=>{ if($("lat_"+m.k)){ $("lat_"+m.k).value = m.lat; $("lon_"+m.k).value = m.lon; if(m.k==="F") customFinishEdited = true; } });
   document.querySelectorAll("#cLapBtns .opt").forEach(x=>x.classList.toggle("sel", +x.dataset.laps===customLaps));
   $("retrieveBox").style.display = "none";
   setCoordFmt("dec");   // saved values are decimal
