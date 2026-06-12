@@ -4,8 +4,8 @@ const html = fs.readFileSync(__dirname + "/index.html", "utf8");
 const m = html.match(/<!--DATA_LOGIC_START-->\s*<script>([\s\S]*?)<\/script>\s*<!--DATA_LOGIC_END-->/);
 if (!m) { console.error("FAIL: data/logic block not found"); process.exit(1); }
 const { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll,
-        trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff, TAC, computeTactics } =
-  new Function(m[1] + "\nreturn { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll, trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff, TAC, computeTactics };")();
+        trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff, TAC, computeTactics, lineBias } =
+  new Function(m[1] + "\nreturn { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll, trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff, TAC, computeTactics, lineBias };")();
 
 let fails = 0;
 const check = (name, cond, detail) => {
@@ -140,6 +140,19 @@ check("wind from S: mark to N is a run", computeTactics(0, 180).mode === "run", 
 
 // 19. null wind => no tactics
 check("null wind returns null tactics", computeTactics(90, null) === null);
+
+
+// 20. Ping the line — favored end of the start line
+{
+  const rc  = { lat: 40.0, lon: -74.0 };
+  const pin = { lat: 40.0, lon: -73.999 };           // pin ~85 m EAST of rc
+  const V = MAG_VAR;                                   // ACTIVE_VAR defaults to MAG_VAR
+  check("line length ~85 m", Math.abs(lineBias(rc,pin,V).len - 85) < 6, String(lineBias(rc,pin,V).len));
+  check("wind from true-East favors PIN (east) end", lineBias(rc, pin, 90 + V).favored === "pin", lineBias(rc,pin,90+V).favored);
+  check("wind from true-West favors RC (west) end",  lineBias(rc, pin, 270 + V).favored === "rc",  lineBias(rc,pin,270+V).favored);
+  check("wind square to line => no end favored",      lineBias(rc, pin, 0 + V).favored === "even", lineBias(rc,pin,0+V).favored);
+  check("null wind => favored null",                  lineBias(rc, pin, null).favored === null);
+}
 
 console.log(fails ? `\n${fails} FAILURES` : "\nALL TESTS PASSED");
 process.exit(fails ? 1 : 0);

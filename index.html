@@ -215,10 +215,10 @@
     td.pos{font-size:12.5px;}
     td.dist{font-size:15px;}
     .topbar{padding:6px 10px;}
-    .topbar .brandLogo{height:54px; width:54px;}
-    .topbar .appTitle{font-size:clamp(22px, 6.5vw, 30px);}
+    .topbar .brandLogo{height:50px; width:50px;}
+    .topbar .appTitle{font-size:clamp(20px, 5.8vw, 28px);}
     .topbar .creditsBand{font-size:12px; padding:2px 9px;}
-    .topbar .gpsBtn{padding:5px 9px; min-height:36px; font-size:12px;}
+    .topbar .gpsBtn{padding:7px 12px; min-height:40px; font-size:15px;}
   }
   /* Phone PORTRAIT: put the phone number on its own line under the name */
   @media (orientation:portrait) and (max-width:560px){
@@ -276,6 +276,16 @@
   .stat .val{font-size:34px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.1;}
   .stat .val.pos{font-size:17px; font-weight:700; padding:4px 0;}
   .stat .unit{font-size:12px; color:var(--muted);}
+  .startLine{margin-top:10px; border:2px solid #0891b2; border-radius:12px; padding:10px 12px; background:#ecfeff;}
+  .slHead{font-size:13px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#0e7490; margin-bottom:8px;}
+  .slBtns{display:flex; flex-wrap:wrap; gap:8px;}
+  .slBtns button{appearance:none; border:2px solid #0891b2; background:#fff; color:#0e7490;
+                 border-radius:9px; padding:10px 12px; font-size:15px; font-weight:800; cursor:pointer; flex:1 1 0; min-height:46px;}
+  .slBtns button.done{background:#0891b2; color:#fff;}
+  .slBtns .slClear{flex:0 0 auto; border-color:var(--line); color:var(--muted); font-weight:700;}
+  .slResult{margin-top:9px; font-size:14px; color:var(--ink); line-height:1.4;}
+  .slResult.on{font-size:15px;}
+  .slResult .fav{color:#16a34a; font-weight:800;}
   .guide{margin-top:10px; border:2px solid var(--accent); border-radius:12px; padding:10px 12px;
          background:#f1f6ff;}
   .gHead{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
@@ -477,6 +487,16 @@
         <div id="windCompass" class="windCompass"></div>
       </div>
 
+      <div class="startLine">
+        <div class="slHead">Start line &middot; ping each end</div>
+        <div class="slBtns">
+          <button id="slBtnRC" onclick="pingEnd('rc')">Ping RC&nbsp;(boat) end</button>
+          <button id="slBtnPin" onclick="pingEnd('pin')">Ping Pin end</button>
+          <button class="slClear" onclick="clearLine()">Clear</button>
+        </div>
+        <div class="slResult" id="slResult">Sail to each end of the start line and tap Ping. Enter the wind (below) to see the favored end.</div>
+      </div>
+
       <div class="guide" id="guide">
         <div class="gHead">
           <span class="gNext">Next mark: <b id="gMark">&mdash;</b></span>
@@ -525,7 +545,9 @@
       its laylines &mdash; once you reach one, you can lay the mark without pointing higher. Set the wind
       above for these to appear.
       <br><b>Pinch</b> with two fingers to zoom the map; <b>drag</b> to pan (one finger once zoomed in).
-      Tap <b>Whole course</b> to reset.</div>
+      Tap <b>Whole course</b> to reset.
+      <br>The <span style="color:#0891b2;font-weight:800">teal dashed line</span> is your pinged start line;
+      the <span style="color:#16a34a;font-weight:800">green end</span> is the favored (more upwind) end.</div>
     </section>
 
   </div>
@@ -691,6 +713,26 @@ function computeTactics(brgMark, twd){
   return { mode, twa, label, headings, favored: fav.t, layline, targetHdg };
 }
 
+/* "Ping the line": favored end of the start line.
+   rc/pin = {lat,lon} pinged at each end; windMag = wind FROM (degrees magnetic).
+   Returns the line length (m), which end is favored, how much further upwind that
+   end is (adv, m), and the line bias (deg off square to the wind). */
+function lineBias(rc, pin, windMag){
+  if(!rc || !pin) return null;
+  const latR = rc.lat*Math.PI/180;
+  const east  = (pin.lon - rc.lon)*Math.cos(latR)*60*1852;   // metres east (pin relative to rc)
+  const north = (pin.lat - rc.lat)*60*1852;                  // metres north
+  const len = Math.hypot(east, north);
+  if(len < 1) return { len:0, favored:"even", adv:0, bias:0 };
+  if(windMag == null) return { len, favored:null, adv:0, bias:0 };
+  const wTrue = (windMag - ACTIVE_VAR)*Math.PI/180;          // geometry is true-north; wind is magnetic
+  const ue = Math.sin(wTrue), un = Math.cos(wTrue);          // unit vector pointing AT the wind (upwind)
+  const proj = east*ue + north*un;                            // +ve => pin is further upwind than rc
+  const favored = Math.abs(proj) < 0.5 ? "even" : (proj > 0 ? "pin" : "rc");
+  const bias = Math.asin(Math.max(-1, Math.min(1, proj/len)))*180/Math.PI;
+  return { len, favored, adv: Math.abs(proj), bias: Math.abs(bias) };
+}
+
 /* Full mark sequence incl. CM roundings: CM, lap1..., CM, lap2..., CM, ... */
 function fullSequence(family, mark, laps){
   const lap = family.seq[mark];
@@ -759,6 +801,7 @@ const geo = {
   watchId: null, lastPos: null, prev: null, sogKt: null, cogTrue: null,
   track: [], seqArr: [], targetIdx: 1, manual: false, zoom: false, nominalWind: null,
   view: null,   // manual pinch/pan viewBox {x,y,w,h} in diagram units, or null = whole course
+  lineRC: null, linePin: null,   // start-line ends pinged by GPS ("ping the line")
 };
 const ROUND_NM = 0.027;   // ~50 m: within this of the target mark => advance to next leg
 
@@ -1072,9 +1115,9 @@ function drawBoatOverlay(){
     s += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="7" fill="#0a6e3a" stroke="#fff" stroke-width="2.5"/>`;
     s += `<text class="boatlbl" x="${(cx+10).toFixed(1)}" y="${(cy-9).toFixed(1)}" fill="#0a6e3a">YOU</text>`;
   }
-  // efficient wind route only on the live map (not the small course-page diagram)
-  const routeSvg = buildRouteSvg();
-  layers.forEach(l=>{ l.innerHTML = (l.closest("#mapDiagram") ? routeSvg : "") + s; });
+  // efficient wind route + start line only on the live map
+  const mapExtra = buildStartLineSvg() + buildRouteSvg();
+  layers.forEach(l=>{ l.innerHTML = (l.closest("#mapDiagram") ? mapExtra : "") + s; });
   applyMapZoom();
   updateMapNotes();
 }
@@ -1204,6 +1247,63 @@ function mapTouchEnd(e){
 
 function clearTrack(){ geo.track = []; drawBoatOverlay(); track("clear_track"); }
 
+/* ---------- ping the line: favored end of the start line ---------- */
+function pingEnd(which){
+  if(!geo.lastPos){ setGpsStatus("Need a GPS fix to ping the line", "err"); return; }
+  const p = { lat: geo.lastPos.lat, lon: geo.lastPos.lon };
+  if(which === "rc") geo.lineRC = p; else geo.linePin = p;
+  updateLineInfo();
+  drawBoatOverlay();
+  track("line_ping", { detail: which });
+}
+function clearLine(){
+  geo.lineRC = null; geo.linePin = null;
+  updateLineInfo();
+  drawBoatOverlay();
+  track("line_clear");
+}
+function updateLineInfo(){
+  const el = $("slResult"); if(!el) return;
+  const rc = geo.lineRC, pin = geo.linePin;
+  const bRC = $("slBtnRC"), bP = $("slBtnPin");
+  if(bRC) bRC.classList.toggle("done", !!rc);
+  if(bP)  bP.classList.toggle("done", !!pin);
+  if(!rc || !pin){
+    el.className = "slResult";
+    el.innerHTML = (rc ? "RC end set. " : "") + (pin ? "Pin end set. " : "") +
+                   (rc||pin ? "Now ping the other end." :
+                    "Sail to each end of the start line and tap Ping. Enter the wind (below) to see the favored end.");
+    return;
+  }
+  const lb = lineBias(rc, pin, getWind());
+  let html = `Line <b>${Math.round(lb.len)} m</b>`;
+  if(lb.favored == null){ html += " &mdash; enter the <b>wind</b> below to find the favored end."; el.className = "slResult"; }
+  else if(lb.favored === "even"){ html += " &mdash; square line, no end favored."; el.className = "slResult"; }
+  else {
+    const name = lb.favored === "pin" ? "PIN end" : "RC (boat) end";
+    html += ` &mdash; favored: <b class="fav">${name}</b> by <b>${Math.round(lb.adv)} m</b> &middot; ${Math.round(lb.bias)}&deg; bias`;
+    el.className = "slResult on";
+  }
+  el.innerHTML = html;
+}
+
+/* start line drawn on the live map (favored end green, other grey) */
+function buildStartLineSvg(){
+  if(!diagramTx || !geo.lineRC || !geo.linePin) return "";
+  const A = projXY(geo.lineRC.lat, geo.lineRC.lon);
+  const B = projXY(geo.linePin.lat, geo.linePin.lon);
+  const lb = lineBias(geo.lineRC, geo.linePin, getWind());
+  const endMark = (P, label, fav)=>{
+    const col = fav ? "#16a34a" : "#475569";
+    return `<circle cx="${P.x.toFixed(1)}" cy="${P.y.toFixed(1)}" r="6.5" fill="${col}" stroke="#fff" stroke-width="2"/>`+
+           `<text x="${P.x.toFixed(1)}" y="${(P.y-10).toFixed(1)}" font-size="11" font-weight="800" text-anchor="middle" fill="${col}">${label}</text>`;
+  };
+  let s = `<line x1="${A.x.toFixed(1)}" y1="${A.y.toFixed(1)}" x2="${B.x.toFixed(1)}" y2="${B.y.toFixed(1)}" stroke="#0891b2" stroke-width="2.4" stroke-dasharray="7 4"/>`;
+  s += endMark(A, "RC",  lb && lb.favored === "rc");
+  s += endMark(B, "PIN", lb && lb.favored === "pin");
+  return s;
+}
+
 /* wind helpers */
 function getWind(){
   const v = parseFloat($("windIn").value);
@@ -1213,6 +1313,7 @@ function useNominalWind(){
   if(geo.nominalWind == null) return;
   $("windIn").value = geo.nominalWind;
   updateGuide();
+  updateLineInfo();         // refresh favored end for the new wind
   drawBoatOverlay();        // redraw route for the new wind
   track("use_nominal", { detail: String(geo.nominalWind) });
 }
@@ -1870,8 +1971,8 @@ function goPage(i){
   if(el && el.style.display !== "none") el.scrollIntoView({ behavior:"smooth", block:"start" });
 }
 
-// recompute tactics + efficient route live as the wind value is edited
-$("windIn").addEventListener("input", ()=>{ updateGuide(); drawBoatOverlay(); });
+// recompute tactics + efficient route + favored end live as the wind value is edited
+$("windIn").addEventListener("input", ()=>{ updateGuide(); updateLineInfo(); drawBoatOverlay(); });
 // log wind changes (on commit, not every keystroke)
 $("windIn").addEventListener("change", ()=>{ if(AUTHORIZED) track("wind_set", { detail: $("windIn").value }); });
 
