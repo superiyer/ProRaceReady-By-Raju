@@ -303,6 +303,13 @@
           font-variant-numeric:tabular-nums; min-width:2.6em;}
   .tClock.warn{color:#b45309;}
   .tClock.go{color:#16a34a;}
+  .tClock.flash{animation:clkFlash .35s ease-out;}
+  .tClock.flashGun{animation:clkGun .7s ease-out;}
+  @keyframes clkFlash{0%{transform:scale(1.18);} 100%{transform:scale(1);}}
+  @keyframes clkGun{0%{transform:scale(1.3); color:#16a34a;} 100%{transform:scale(1);}}
+  .slHeadClock{margin-left:8px; font-variant-numeric:tabular-nums; color:#0e7490;}
+  .slHeadClock.warn{color:#b45309;}
+  .slHeadClock.go{color:#16a34a;}
   .tBtns{display:flex; flex-wrap:wrap; gap:7px; align-items:center;}
   .tBtns button{appearance:none; border:2px solid #0891b2; background:#fff; color:#0e7490;
                 border-radius:8px; padding:8px 12px; font-size:15px; font-weight:800; cursor:pointer; min-height:42px;}
@@ -512,7 +519,7 @@
 
       <div class="startLine collapsible" id="startBox">
         <div class="slHead secHead" onclick="toggleSection('startBox')">
-          <span>Start line &amp; timer</span><span class="secChevron">&#9662;</span>
+          <span>Start line &amp; timer <b class="slHeadClock" id="slHeadClock"></b></span><span class="secChevron">&#9662;</span>
         </div>
         <div class="secBody">
           <div class="slBtns">
@@ -1401,37 +1408,77 @@ function updateStartLive(){
   el.innerHTML = html;
 }
 
-/* ---------- start timer ---------- */
-let timerEnd = null, timerInt = null;
+/* ---------- start timer (with gun cues: beep + vibrate + flash) ---------- */
+let timerEnd = null, timerInt = null, lastCueSec = null, audioCtx = null;
 function fmtClock(ms){
   const neg = ms < -500; let s = Math.round(Math.abs(ms)/1000);
   return (neg?"+":"") + Math.floor(s/60) + ":" + String(s%60).padStart(2,"0");
 }
+function ensureAudio(){
+  try{ if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+  if(audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+function beep(type){
+  if(!audioCtx) return;
+  try{
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime;
+    o.type = "sine";
+    o.frequency.value = type==="gun" ? 880 : (type==="minute" ? 620 : 760);
+    const dur = type==="gun" ? 0.7 : (type==="minute" ? 0.35 : 0.12);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.45, t+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t); o.stop(t+dur+0.02);
+  }catch(e){}
+}
+function cue(type){
+  beep(type);
+  if(navigator.vibrate){ navigator.vibrate(type==="gun" ? [220,90,220,90,320] : (type==="minute" ? 200 : 70)); }
+  const el = $("tClock");
+  if(el){ el.classList.remove("flash"); void el.offsetWidth; el.classList.add(type==="gun" ? "flashGun" : "flash"); }
+}
+function fireCues(rem){
+  const sec = Math.ceil(rem/1000);
+  if(sec === lastCueSec) return;
+  lastCueSec = sec;
+  if(sec === 0) cue("gun");
+  else if(sec >= 1 && sec <= 10) cue("tick");
+  else if(sec === 30 || sec === 60 || sec === 120 || sec === 180) cue("minute");
+}
 function tickTimer(){
-  const el = $("tClock"); if(!el || timerEnd == null) return;
-  const rem = timerEnd - Date.now();
-  el.textContent = fmtClock(rem);
-  el.classList.toggle("warn", rem <= 60000 && rem > 0);
-  el.classList.toggle("go", rem <= 0);
+  if(timerEnd == null) return;
+  const rem = timerEnd - Date.now(), txt = fmtClock(rem);
+  const warn = rem <= 60000 && rem > 0, go = rem <= 0;
+  const el = $("tClock");
+  if(el){ el.textContent = txt; el.classList.toggle("warn", warn); el.classList.toggle("go", go); }
+  const hc = $("slHeadClock");
+  if(hc){ hc.textContent = txt; hc.classList.toggle("warn", warn); hc.classList.toggle("go", go); }
+  fireCues(rem);
   updateStartLive();
 }
 function startTimer(){
+  ensureAudio();                                          // unlock audio on this user tap (iOS)
   const min = Math.max(1, Math.min(30, parseInt($("tMin").value, 10) || 5));
-  timerEnd = Date.now() + min*60000;
-  if(!timerInt) timerInt = setInterval(tickTimer, 250);
+  timerEnd = Date.now() + min*60000; lastCueSec = null;
+  if(!timerInt) timerInt = setInterval(tickTimer, 200);
   tickTimer();
   track("timer_start", { detail: String(min) });
 }
 function syncTimer(){
   if(timerEnd == null) return;
+  ensureAudio();
   const rem = timerEnd - Date.now();
   timerEnd = Date.now() + Math.round(rem/60000)*60000;    // snap to nearest whole minute
+  lastCueSec = null;
   tickTimer();
   track("timer_sync");
 }
 function resetTimer(){
-  timerEnd = null; if(timerInt){ clearInterval(timerInt); timerInt = null; }
+  timerEnd = null; lastCueSec = null;
+  if(timerInt){ clearInterval(timerInt); timerInt = null; }
   const el = $("tClock"); if(el){ el.textContent = (parseInt($("tMin").value,10)||5) + ":00"; el.classList.remove("warn","go"); }
+  const hc = $("slHeadClock"); if(hc){ hc.textContent = ""; hc.classList.remove("warn","go"); }
   updateStartLive();
   track("timer_reset");
 }
