@@ -67,9 +67,13 @@
   /* ---- swipeable pager ---- */
   .topbar{position:sticky; top:0; z-index:30; display:flex; align-items:center;
           justify-content:space-between; gap:10px; background:#fff;
-          border-bottom:2px solid var(--ink); padding:8px 12px;}
-  .barTitle{font-size:18px; font-weight:800; color:var(--accent); letter-spacing:.3px;}
-  .topbar .gpsBtn{padding:9px 16px; min-height:42px; font-size:15px;}
+          border-bottom:2px solid var(--ink); padding:7px 12px;}
+  .topbar .brand{padding:0; gap:11px; min-width:0;}        /* compact brand in the locked bar */
+  .topbar .brandLogo{height:54px; width:54px; border-radius:12px;}
+  .topbar .appTitle{font-size:24px; white-space:nowrap;}
+  .topbar .creditsBand{font-size:11.5px; padding:3px 9px;}
+  .topbar .brandText{gap:5px; overflow:hidden;}            /* never push the GPS button off-screen */
+  .topbar .gpsBtn{flex:0 0 auto; padding:9px 15px; min-height:42px; font-size:15px;}
   /* single continuous page: Course then Live map stacked, one scroll */
   .pager{display:block;}
   .page{padding:14px 14px 0;}
@@ -208,15 +212,16 @@
     td.hdg{font-size:26px;}
     td.pos{font-size:12.5px;}
     td.dist{font-size:15px;}
-    .appTitle{font-size:27px;}
-    .brandLogo{height:58px; width:58px;}
-    .brand{gap:11px;}
+    .topbar{padding:6px 10px;}
+    .topbar .brandLogo{height:46px; width:46px;}
+    .topbar .appTitle{font-size:20px;}
+    .topbar .creditsBand{font-size:10.5px; padding:2px 8px;}
+    .topbar .gpsBtn{padding:8px 12px; min-height:40px; font-size:14px;}
   }
   /* Tablet / desktop LANDSCAPE (e.g. iPad landscape): show Course and the live map
      side-by-side instead of stacked. The whole page scrolls as one. */
   @media (min-width:900px) and (min-height:680px) and (orientation:landscape){
     .wrap{max-width:1180px;}
-    .topbar{justify-content:flex-end;}         /* GPS button to the right */
     .pager{display:flex; gap:22px; align-items:flex-start;}
     .page{flex:1 1 0; min-width:0;}
     .liveSep{display:none;}                     /* no divider needed between columns */
@@ -352,7 +357,13 @@
 <div class="wrap">
 
   <div class="topbar">
-    <span class="barTitle">Pro Race Ready</span>
+    <div class="brand">
+      <img class="brandLogo" src="icon-192.png" alt="Pro Race Ready">
+      <div class="brandText">
+        <div class="appTitle">Pro Race Ready!</div>
+        <div class="creditsBand">By Raju Venkatraman<span class="sep">&bull;</span>646.300.2466</div>
+      </div>
+    </div>
     <button id="gpsBtn" class="gpsBtn" onclick="toggleGps()">Start GPS</button>
   </div>
 
@@ -361,15 +372,6 @@
     <!-- ============ PAGE 0 : COURSE ============ -->
     <section class="page" id="pg0">
       <header>
-        <hr class="rule">
-        <div class="brand">
-          <img class="brandLogo" src="icon-192.png" alt="Pro Race Ready">
-          <div class="brandText">
-            <div class="appTitle">Pro Race Ready!</div>
-            <div class="creditsBand">By Raju Venkatraman<span class="sep">&bull;</span>646.300.2466</div>
-          </div>
-        </div>
-        <hr class="rule">
         <h1>Race Course Headings</h1>
         <span class="portnote">ALL MARK ROUNDINGS TO PORT</span>
       </header>
