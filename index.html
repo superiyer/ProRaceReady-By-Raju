@@ -548,13 +548,13 @@
         </div>
         <div class="secBody">
           <div class="slBtns">
-            <button id="slBtnRC" onclick="pingEnd('rc')">Ping RC&nbsp;(boat) end</button>
+            <button id="slBtnRC" onclick="pingEnd('rc')">Ping RC boat end</button>
             <button id="slBtnPin" onclick="pingEnd('pin')">Ping Pin end</button>
             <button class="slClear" onclick="clearLine()">Clear line</button>
           </div>
           <div class="slResult" id="slResult">Ping the start-line end(s). Enter the wind (below) to see the favored end.</div>
           <div class="slDist" id="slDist"></div>
-          <div class="slMapHint">On the map: the <span style="color:#0891b2;font-weight:800">teal dashed line</span> is your pinged start line; the <span style="color:#16a34a;font-weight:800">green end</span> is the favored (more upwind) end.</div>
+          <div class="slMapHint" id="slMapHint">On the map: the <span style="color:#0891b2;font-weight:800">teal dashed line</span> is your pinged start line; the <span style="color:#16a34a;font-weight:800">green end</span> is the favored (more upwind) end.</div>
           <div class="slTimer" id="slTimer">
             <div class="tClockWrap">
               <div class="tClock" id="tClock">5:00</div>
@@ -634,7 +634,7 @@
         <span id="livePos">&mdash;</span>
         <span id="acc"></span>
       </div>
-      <div class="maphint">Boat shows as a green dot with a heading arrow; your track trails behind.
+      <div class="maphint" style="display:none">Boat shows as a green dot with a heading arrow; your track trails behind.
       The <span style="color:#c026d3;font-weight:800">magenta dotted line</span> is the most efficient
       path to the next mark for the entered wind &mdash; with a tack (<b>T</b>) when beating or a gybe
       (<b>G</b>) when running. The <span style="color:#c026d3">faint dashed lines</span> from the mark are
@@ -1396,7 +1396,7 @@ function updateLineInfo(){
   if(!rc || !pin){
     el.className = "slResult";
     if(!state.custom){
-      el.innerHTML = "Pin end = <b>CM</b> (Center Mark). Sail to the <b>RC (boat)</b> end and tap Ping.";
+      el.innerHTML = "Sail to the <b>Race Committee boat</b> and tap <b>Ping RC boat</b>.";
     } else {
       el.innerHTML = rc ? "RC end set. Ping the <b>Pin</b> end."
                    : (pin ? "Pin end set. Ping the <b>RC (boat)</b> end." : "Ping <b>both</b> ends of the start line.");
@@ -1576,11 +1576,13 @@ function retireCountdown(){
   timerEnd = null; lastCueSec = null; timerMode = "plain";
   if(timerInt){ clearInterval(timerInt); timerInt = null; }
   const sl = $("slTimer"); if(sl) sl.style.display = "none";
+  const mh = $("slMapHint"); if(mh) mh.style.display = "none";   // hide the map legend at the gun
   const hc = $("slHeadClock"); if(hc){ hc.textContent = ""; hc.classList.remove("warn","go"); }
   const ph = $("tPhase"); if(ph) ph.textContent = "";
 }
 function showCountdown(){
   const sl = $("slTimer"); if(sl) sl.style.display = "";
+  const mh = $("slMapHint"); if(mh) mh.style.display = "";
   const el = $("tClock"); if(el){ el.textContent = (parseInt($("tMin").value,10)||5) + ":00"; el.classList.remove("warn","go"); }
 }
 function raceArm(t){                                  // auto-start at the gun (non-destructive)
