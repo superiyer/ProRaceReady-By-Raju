@@ -297,6 +297,7 @@
   .slDist.ocs b{color:var(--warn);}
   .slDist .early{color:#16a34a; font-weight:700;}
   .slDist .late{color:var(--warn); font-weight:700;}
+  .slMapHint{margin-top:8px; font-size:12.5px; color:var(--muted); line-height:1.4;}
   .slTimer{margin-top:10px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
            border-top:1px solid #b6e6ef; padding-top:9px;}
   .tClock{font-size:clamp(34px,11vw,52px); font-weight:800; color:#0e7490; line-height:1;
@@ -553,6 +554,7 @@
           </div>
           <div class="slResult" id="slResult">Ping the start-line end(s). Enter the wind (below) to see the favored end.</div>
           <div class="slDist" id="slDist"></div>
+          <div class="slMapHint">On the map: the <span style="color:#0891b2;font-weight:800">teal dashed line</span> is your pinged start line; the <span style="color:#16a34a;font-weight:800">green end</span> is the favored (more upwind) end.</div>
           <div class="slTimer" id="slTimer">
             <div class="tClockWrap">
               <div class="tClock" id="tClock">5:00</div>
@@ -639,9 +641,7 @@
       its laylines &mdash; once you reach one, you can lay the mark without pointing higher. Set the wind
       above for these to appear.
       <br><b>Pinch</b> with two fingers to zoom the map; <b>drag</b> to pan (one finger once zoomed in).
-      Tap <b>Whole course</b> to reset.
-      <br>The <span style="color:#0891b2;font-weight:800">teal dashed line</span> is your pinged start line;
-      the <span style="color:#16a34a;font-weight:800">green end</span> is the favored (more upwind) end.</div>
+      Tap <b>Whole course</b> to reset.</div>
     </section>
 
   </div>
