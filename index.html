@@ -326,6 +326,15 @@
                  border-radius:8px; padding:8px 12px; font-size:15px; font-weight:800; cursor:pointer; min-height:42px;}
   .rtBtns .rtMark{background:#15803d; color:#fff;}
   .rtBtns .rtReset{border-color:var(--line); color:var(--muted); font-weight:700;}
+  .rtConfirm{margin-top:9px; display:flex; flex-wrap:wrap; align-items:center; gap:9px;
+             background:#fff; border:2px solid #15803d; border-radius:9px; padding:9px 11px;}
+  .rtConfirm #rtConfirmMsg{flex:1 1 100%; font-size:14px; font-weight:700; color:var(--ink);}
+  .rtConfirmBtns{display:flex; gap:8px;}
+  .rtConfirm button{appearance:none; border:2px solid #15803d; background:#fff; color:#15803d;
+                    border-radius:8px; padding:8px 16px; font-size:15px; font-weight:800; cursor:pointer; min-height:42px;}
+  .rtConfirm .rtConfirmYes{background:#15803d; color:#fff;}
+  .rtConfirm .rtConfirmYes.danger{background:var(--warn); border-color:var(--warn);}
+  .rtConfirm .rtConfirmNo{border-color:var(--line); color:var(--muted);}
   .rtSplits{margin-top:9px; font-size:14px; font-variant-numeric:tabular-nums;}
   .rtSplit{display:flex; gap:10px; padding:2px 0;}
   .rtSplit .rtm{flex:0 0 3.5em; font-weight:800; color:#15803d;}
@@ -602,12 +611,19 @@
             <div class="rtElapsed" id="rtElapsed">0:00</div>
             <div class="rtLap" id="rtLap"></div>
           </div>
-          <div class="rtBtns">
+          <div class="rtBtns" id="rtBtns">
             <button class="rtMark" onclick="raceMark()">Mark</button>
             <button onclick="raceUndo()">Undo</button>
             <button onclick="raceFinishTap()">Finish</button>
-            <button onclick="raceStartManual()">Start</button>
-            <button class="rtReset" onclick="raceReset()">Reset</button>
+            <button id="rtStartBtn" onclick="raceStartManual()">Start</button>
+            <button class="rtReset" onclick="raceResetTap()">Reset</button>
+          </div>
+          <div class="rtConfirm" id="rtConfirm" style="display:none">
+            <span id="rtConfirmMsg"></span>
+            <span class="rtConfirmBtns">
+              <button class="rtConfirmYes" id="rtConfirmYes" onclick="confirmYes()">Confirm</button>
+              <button class="rtConfirmNo" onclick="confirmNo()">Cancel</button>
+            </span>
           </div>
           <div class="rtSplits" id="rtSplits"></div>
         </div>
@@ -1602,11 +1618,30 @@ function raceStartManual(){
   ensureRaceTick(); updateRaceTimer(); track("race_start", { detail:"manual" });
 }
 function raceReset(){
+  closeConfirm();
   raceStart = null; raceFinish = null; splits = [];
   if(raceInt){ clearInterval(raceInt); raceInt = null; }
   showCountdown(); updateStartVisibility();           // start section back (e.g. general recall)
   updateRaceTimer(); track("race_reset");
 }
+
+/* inline Confirm / Cancel so Reset and Finish can't fire on an accidental tap */
+let pendingConfirm = null;
+function askConfirm(msg, yesLabel, onYes, danger){
+  pendingConfirm = onYes;
+  const m = $("rtConfirmMsg"); if(m) m.innerHTML = msg;
+  const y = $("rtConfirmYes"); if(y){ y.textContent = yesLabel; y.classList.toggle("danger", !!danger); }
+  const b = $("rtBtns"); if(b) b.style.display = "none";
+  const c = $("rtConfirm"); if(c) c.style.display = "";
+}
+function closeConfirm(){
+  pendingConfirm = null;
+  const c = $("rtConfirm"); if(c) c.style.display = "none";
+  const b = $("rtBtns"); if(b) b.style.display = "";
+}
+function confirmYes(){ const f = pendingConfirm; closeConfirm(); if(typeof f === "function") f(); }
+function confirmNo(){ closeConfirm(); }
+function raceResetTap(){ askConfirm("Reset the race timer? This clears all splits.", "Reset", raceReset, true); }
 /* called whenever the next-mark target moves (auto rounding OR manual prev/next) */
 function onTargetChange(oldIdx, newIdx){
   if(raceStart == null || raceFinish != null) return;
@@ -1634,7 +1669,11 @@ function raceUndo(){
   const old = geo.targetIdx; geo.targetIdx--; onTargetChange(old, geo.targetIdx);
   updateGuide(); drawBoatOverlay();
 }
-function raceFinishTap(){ if(raceStart == null) raceStartManual(); doFinish(Date.now()); }
+function raceFinishTap(){
+  if(raceStart == null) return;                       // nothing to finish yet
+  const t = Date.now();                               // stamp the finish at the tap, not at confirm
+  askConfirm("Finish the race now?", "Finish", ()=>doFinish(t), false);
+}
 function doFinish(t){
   if(raceStart == null || raceFinish != null) return;
   raceFinish = t;
@@ -1646,6 +1685,7 @@ function doFinish(t){
 }
 function updateRaceTimer(){
   const elEl = $("rtElapsed"); if(!elEl) return;
+  const sb = $("rtStartBtn"); if(sb) sb.style.display = (raceStart == null) ? "" : "none";  // Start acts like reset -> gone once racing
   const lapEl = $("rtLap"), spEl = $("rtSplits"), hc = $("rtHeadClock");
   if(raceStart == null){
     elEl.textContent = "0:00"; elEl.classList.remove("done");
