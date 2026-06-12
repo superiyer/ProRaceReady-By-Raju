@@ -553,7 +553,7 @@
           </div>
           <div class="slResult" id="slResult">Ping the start-line end(s). Enter the wind (below) to see the favored end.</div>
           <div class="slDist" id="slDist"></div>
-          <div class="slTimer">
+          <div class="slTimer" id="slTimer">
             <div class="tClockWrap">
               <div class="tClock" id="tClock">5:00</div>
               <div class="tPhase" id="tPhase"></div>
@@ -1571,19 +1571,34 @@ function resetTimer(){
 let raceStart = null, raceFinish = null, splits = [], raceInt = null, armTargetIdx = 1;
 function fmtRace(ms){ const s = Math.max(0, Math.round(ms/1000)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
 function ensureRaceTick(){ if(!raceInt) raceInt = setInterval(updateRaceTimer, 250); }
+/* retire the start countdown — its job ends at the gun; the race timer takes over */
+function retireCountdown(){
+  timerEnd = null; lastCueSec = null; timerMode = "plain";
+  if(timerInt){ clearInterval(timerInt); timerInt = null; }
+  const sl = $("slTimer"); if(sl) sl.style.display = "none";
+  const hc = $("slHeadClock"); if(hc){ hc.textContent = ""; hc.classList.remove("warn","go"); }
+  const ph = $("tPhase"); if(ph) ph.textContent = "";
+}
+function showCountdown(){
+  const sl = $("slTimer"); if(sl) sl.style.display = "";
+  const el = $("tClock"); if(el){ el.textContent = (parseInt($("tMin").value,10)||5) + ":00"; el.classList.remove("warn","go"); }
+}
 function raceArm(t){                                  // auto-start at the gun (non-destructive)
   if(raceStart != null) return;
   raceStart = t; raceFinish = null; splits = []; armTargetIdx = geo.targetIdx;
+  retireCountdown();                                 // hide the start timer once racing
   ensureRaceTick(); updateRaceTimer(); track("race_start", { detail:"gun" });
 }
 function raceStartManual(){
   ensureAudio();
   raceStart = Date.now(); raceFinish = null; splits = []; armTargetIdx = geo.targetIdx;
+  retireCountdown();
   ensureRaceTick(); updateRaceTimer(); track("race_start", { detail:"manual" });
 }
 function raceReset(){
   raceStart = null; raceFinish = null; splits = [];
   if(raceInt){ clearInterval(raceInt); raceInt = null; }
+  showCountdown();                                   // start timer available again (e.g. general recall)
   updateRaceTimer(); track("race_reset");
 }
 /* called whenever the next-mark target moves (auto rounding OR manual prev/next) */
