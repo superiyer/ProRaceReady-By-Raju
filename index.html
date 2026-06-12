@@ -310,6 +310,27 @@
   .slHeadClock{margin-left:8px; font-variant-numeric:tabular-nums; color:#0e7490;}
   .slHeadClock.warn{color:#b45309;}
   .slHeadClock.go{color:#16a34a;}
+  /* race timer */
+  .raceTimer{margin-top:10px; border:2px solid #15803d; border-radius:12px; padding:10px 12px; background:#f0fdf4;}
+  .rtHead{font-size:13px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#15803d;
+          display:flex; align-items:center; justify-content:space-between;}
+  .collapsible:not(.collapsed) .rtHead{margin-bottom:8px;}
+  .rtHeadClock{margin-left:8px; font-variant-numeric:tabular-nums; color:#15803d;}
+  .rtMain{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;}
+  .rtElapsed{font-size:clamp(34px,11vw,52px); font-weight:800; color:#15803d; line-height:1; font-variant-numeric:tabular-nums;}
+  .rtElapsed.done{color:#0e7490;}
+  .rtLap{font-size:15px; font-weight:700; color:var(--ink);}
+  .rtBtns{display:flex; flex-wrap:wrap; gap:7px; margin-top:9px;}
+  .rtBtns button{appearance:none; border:2px solid #15803d; background:#fff; color:#15803d;
+                 border-radius:8px; padding:8px 12px; font-size:15px; font-weight:800; cursor:pointer; min-height:42px;}
+  .rtBtns .rtMark{background:#15803d; color:#fff;}
+  .rtBtns .rtReset{border-color:var(--line); color:var(--muted); font-weight:700;}
+  .rtSplits{margin-top:9px; font-size:14px; font-variant-numeric:tabular-nums;}
+  .rtSplit{display:flex; gap:10px; padding:2px 0;}
+  .rtSplit .rtm{flex:0 0 3.5em; font-weight:800; color:#15803d;}
+  .rtSplit .rtc{flex:0 0 4em;}
+  .rtSplit .rtd{color:var(--muted);}
+  .rtLapLine{font-weight:800; color:#0e7490; padding:2px 0 6px; border-bottom:1px dashed #bbf7d0; margin-bottom:4px;}
   .tClockWrap{display:flex; flex-direction:column; align-items:flex-start; gap:2px;}
   .tPhase{font-size:12px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:#0e7490; min-height:1px;}
   .tBtns{display:flex; flex-wrap:wrap; gap:7px; align-items:center;}
@@ -567,6 +588,26 @@
         </div>
         <div class="tactics" id="tactics"></div>
         <div class="steer" id="steer">&mdash;</div>
+        </div>
+      </div>
+
+      <div class="raceTimer collapsible collapsed" id="raceBox">
+        <div class="rtHead secHead" onclick="toggleSection('raceBox')">
+          <span>Race timer <b class="rtHeadClock" id="rtHeadClock"></b></span><span class="secChevron">&#9662;</span>
+        </div>
+        <div class="secBody">
+          <div class="rtMain">
+            <div class="rtElapsed" id="rtElapsed">0:00</div>
+            <div class="rtLap" id="rtLap"></div>
+          </div>
+          <div class="rtBtns">
+            <button class="rtMark" onclick="raceMark()">Mark</button>
+            <button onclick="raceUndo()">Undo</button>
+            <button onclick="raceFinishTap()">Finish</button>
+            <button onclick="raceStartManual()">Start</button>
+            <button class="rtReset" onclick="raceReset()">Reset</button>
+          </div>
+          <div class="rtSplits" id="rtSplits"></div>
         </div>
       </div>
 
@@ -941,6 +982,7 @@ function renderResult(){
     geo.seqArr = seqArr; geo.targetIdx = 1; geo.manual = false;
     geo.view = null; geo.zoom = false;     // reset zoom/pan for the new course
     geo.lineRC = null; geo.linePin = null; // fresh start line for the new course
+    raceReset();                           // clear race timing for the new course
     geo.nominalWind = Math.round(bearingMag(ACTIVE_MARKS[ACTIVE_START], ACTIVE_MARKS[fam.seq[mark][0]])) % 360;
     $("windNom").textContent = String(geo.nominalWind).padStart(3,"0") + "°";
     if($("windIn").value === "") $("windIn").value = geo.nominalWind;
@@ -1323,9 +1365,11 @@ let racePhase = "prestart";
 function toggleSection(id){ const el = $(id); if(el) el.classList.toggle("collapsed"); }
 function setPhase(p){
   racePhase = p;
-  const start = $("startBox"), guide = $("guide");
-  if(p === "racing"){ start && start.classList.add("collapsed"); guide && guide.classList.remove("collapsed"); }
-  else             { start && start.classList.remove("collapsed"); guide && guide.classList.add("collapsed"); }
+  const set = (id, collapsed)=>{ const el = $(id); if(el) el.classList.toggle("collapsed", collapsed); };
+  const racing = (p === "racing");
+  set("startBox", racing);          // start tools fold away once racing
+  set("guide",   !racing);          // next-mark opens when racing
+  set("raceBox", !racing);          // race timer opens when racing
 }
 
 function pingEnd(which){
@@ -1398,7 +1442,7 @@ function updateStartLive(){
   }
   // auto-detect the start: after the gun, crossing to the course side = racing
   if(racePhase === "prestart" && ocs && timerEnd != null && (timerEnd - Date.now()) < 0){
-    setPhase("racing"); track("race_started");
+    raceArm(Date.now()); setPhase("racing"); track("race_started");
   }
   let html;
   if(ocs){ el.className = "slDist ocs"; html = `<b>OVER EARLY ${Math.round(dist)} m</b>`; }
@@ -1484,6 +1528,7 @@ function tickTimer(){
   const ph = $("tPhase");
   if(ph) ph.innerHTML = (timerMode === "isaf" && timerEnd != null) ? isafPhase(rem) : "";
   fireCues(rem);
+  if(go && raceStart == null) raceArm(timerEnd);   // the gun starts the race clock
   updateStartLive();
 }
 function startTimer(){
@@ -1520,6 +1565,94 @@ function resetTimer(){
   const ph = $("tPhase"); if(ph) ph.textContent = "";
   updateStartLive();
   track("timer_reset");
+}
+
+/* ---------- race timer: elapsed since gun + auto lap/leg splits ---------- */
+let raceStart = null, raceFinish = null, splits = [], raceInt = null, armTargetIdx = 1;
+function fmtRace(ms){ const s = Math.max(0, Math.round(ms/1000)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
+function ensureRaceTick(){ if(!raceInt) raceInt = setInterval(updateRaceTimer, 250); }
+function raceArm(t){                                  // auto-start at the gun (non-destructive)
+  if(raceStart != null) return;
+  raceStart = t; raceFinish = null; splits = []; armTargetIdx = geo.targetIdx;
+  ensureRaceTick(); updateRaceTimer(); track("race_start", { detail:"gun" });
+}
+function raceStartManual(){
+  ensureAudio();
+  raceStart = Date.now(); raceFinish = null; splits = []; armTargetIdx = geo.targetIdx;
+  ensureRaceTick(); updateRaceTimer(); track("race_start", { detail:"manual" });
+}
+function raceReset(){
+  raceStart = null; raceFinish = null; splits = [];
+  if(raceInt){ clearInterval(raceInt); raceInt = null; }
+  updateRaceTimer(); track("race_reset");
+}
+/* called whenever the next-mark target moves (auto rounding OR manual prev/next) */
+function onTargetChange(oldIdx, newIdx){
+  if(raceStart == null || raceFinish != null) return;
+  if(newIdx > oldIdx){
+    for(let k=oldIdx; k<newIdx; k++){
+      const mk = geo.seqArr[k];
+      splits.push({ mark: mk, atMs: Date.now()-raceStart, isLap: (mk===ACTIVE_START || mk===ACTIVE_FINISH) });
+    }
+  } else if(newIdx < oldIdx){
+    for(let k=oldIdx; k>newIdx && splits.length; k--) splits.pop();
+  }
+  updateRaceTimer();
+}
+function raceMark(){
+  if(raceStart == null){ raceStartManual(); return; }
+  const seq = geo.seqArr;
+  if(geo.targetIdx >= seq.length-1){ doFinish(Date.now()); return; }    // at last mark -> finish
+  const old = geo.targetIdx; geo.targetIdx++; onTargetChange(old, geo.targetIdx);
+  updateGuide(); drawBoatOverlay();
+}
+function raceUndo(){
+  if(raceStart == null) return;
+  if(raceFinish != null){ raceFinish = null; ensureRaceTick(); updateRaceTimer(); return; }  // undo finish
+  if(geo.targetIdx <= armTargetIdx) return;
+  const old = geo.targetIdx; geo.targetIdx--; onTargetChange(old, geo.targetIdx);
+  updateGuide(); drawBoatOverlay();
+}
+function raceFinishTap(){ if(raceStart == null) raceStartManual(); doFinish(Date.now()); }
+function doFinish(t){
+  if(raceStart == null || raceFinish != null) return;
+  raceFinish = t;
+  splits.push({ mark: ACTIVE_FINISH, atMs: t-raceStart, isLap:true, isFinish:true });
+  if(raceInt){ clearInterval(raceInt); raceInt = null; }                // freeze the clock
+  updateRaceTimer();
+  beep("long"); if(navigator.vibrate) navigator.vibrate(420);
+  track("race_finish", { detail: fmtRace(t-raceStart) });
+}
+function updateRaceTimer(){
+  const elEl = $("rtElapsed"); if(!elEl) return;
+  const lapEl = $("rtLap"), spEl = $("rtSplits"), hc = $("rtHeadClock");
+  if(raceStart == null){
+    elEl.textContent = "0:00"; elEl.classList.remove("done");
+    if(lapEl) lapEl.innerHTML = "Not started &mdash; arms at the gun, or tap <b>Start</b>.";
+    if(spEl) spEl.innerHTML = ""; if(hc) hc.textContent = "";
+    return;
+  }
+  const nowMs = (raceFinish != null ? raceFinish : Date.now()) - raceStart;
+  const txt = fmtRace(nowMs);
+  elEl.textContent = txt; elEl.classList.toggle("done", raceFinish != null);
+  if(hc) hc.textContent = txt;
+  const boundaries = splits.filter(s=>s.isLap);
+  const lastB = boundaries.length ? boundaries[boundaries.length-1].atMs : 0;
+  if(lapEl){
+    lapEl.innerHTML = raceFinish != null
+      ? `<b>Finished</b> &middot; ${boundaries.length} lap${boundaries.length===1?"":"s"}`
+      : `Lap <b>${boundaries.length+1}</b> &middot; ${fmtRace(nowMs - lastB)}`;
+  }
+  if(spEl){
+    let prev = 0, lapStart = 0, lapN = 1, html = "";
+    for(const s of splits){
+      const leg = s.atMs - prev; prev = s.atMs;
+      const name = s.isFinish ? "FINISH" : (s.isLap ? "CM" : s.mark);
+      html += `<div class="rtSplit"><span class="rtm">${name}</span><span class="rtc">${fmtRace(s.atMs)}</span><span class="rtd">+${fmtRace(leg)}</span></div>`;
+      if(s.isLap){ html += `<div class="rtLapLine">Lap ${lapN}: ${fmtRace(s.atMs-lapStart)}</div>`; lapStart = s.atMs; lapN++; }
+    }
+    spEl.innerHTML = html;
+  }
 }
 
 /* start line drawn on the live map (favored end green, other grey) */
@@ -1715,9 +1848,16 @@ function updateGuide(){
   if(!seq.length) return;
 
   // auto-detect rounding (unless the user has taken manual control)
-  if(geo.lastPos && !geo.manual && geo.targetIdx < seq.length){
+  if(geo.lastPos && !geo.manual && geo.targetIdx < seq.length-1){
     const tgt = seq[geo.targetIdx];
-    if(distNm(geo.lastPos, ACTIVE_MARKS[tgt]) < ROUND_NM && geo.targetIdx < seq.length-1) geo.targetIdx++;
+    if(distNm(geo.lastPos, ACTIVE_MARKS[tgt]) < ROUND_NM){
+      const old = geo.targetIdx; geo.targetIdx++; onTargetChange(old, geo.targetIdx);
+    }
+  }
+  // auto-finish when reaching the last mark
+  if(!geo.manual && raceStart != null && raceFinish == null && geo.lastPos && geo.targetIdx === seq.length-1
+     && distNm(geo.lastPos, ACTIVE_MARKS[seq[seq.length-1]]) < ROUND_NM){
+    doFinish(Date.now());
   }
   highlightLeg();
 
@@ -1791,7 +1931,9 @@ function highlightLeg(){
 
 function stepLeg(d){
   geo.manual = true;
+  const old = geo.targetIdx;
   geo.targetIdx = Math.max(1, Math.min(geo.seqArr.length-1, geo.targetIdx + d));
+  onTargetChange(old, geo.targetIdx);
   updateGuide();
   drawBoatOverlay();        // redraw the efficient route to the new target
 }
