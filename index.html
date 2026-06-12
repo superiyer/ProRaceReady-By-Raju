@@ -1396,7 +1396,7 @@ function updateLineInfo(){
   if(!rc || !pin){
     el.className = "slResult";
     if(!state.custom){
-      el.innerHTML = "Pin end = <b>CM</b> (committee mark). Sail to the <b>RC (boat)</b> end and tap Ping.";
+      el.innerHTML = "Pin end = <b>CM</b> (Center Mark). Sail to the <b>RC (boat)</b> end and tap Ping.";
     } else {
       el.innerHTML = rc ? "RC end set. Ping the <b>Pin</b> end."
                    : (pin ? "Pin end set. Ping the <b>RC (boat)</b> end." : "Ping <b>both</b> ends of the start line.");
