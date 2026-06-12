@@ -278,6 +278,13 @@
   .stat .unit{font-size:12px; color:var(--muted);}
   .startLine{margin-top:10px; border:2px solid #0891b2; border-radius:12px; padding:10px 12px; background:#ecfeff;}
   .slHead{font-size:13px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#0e7490; margin-bottom:8px;}
+  /* collapsible sections (start tools vs next-mark) */
+  .secHead{cursor:pointer; user-select:none;}
+  .slHead.secHead{display:flex; align-items:center; justify-content:space-between; margin-bottom:0;}
+  .collapsible:not(.collapsed) .slHead.secHead{margin-bottom:8px;}
+  .secChevron{display:inline-block; font-size:13px; transition:transform .15s; margin-left:8px;}
+  .collapsed .secChevron{transform:rotate(-90deg);}
+  .collapsed .secBody{display:none;}
   .slBtns{display:flex; flex-wrap:wrap; gap:8px;}
   .slBtns button{appearance:none; border:2px solid #0891b2; background:#fff; color:#0e7490;
                  border-radius:9px; padding:10px 12px; font-size:15px; font-weight:800; cursor:pointer; flex:1 1 0; min-height:46px;}
@@ -503,31 +510,36 @@
         <div id="windCompass" class="windCompass"></div>
       </div>
 
-      <div class="startLine">
-        <div class="slHead">Start line &amp; timer</div>
-        <div class="slBtns">
-          <button id="slBtnRC" onclick="pingEnd('rc')">Ping RC&nbsp;(boat) end</button>
-          <button id="slBtnPin" onclick="pingEnd('pin')">Ping Pin end</button>
-          <button class="slClear" onclick="clearLine()">Clear line</button>
+      <div class="startLine collapsible" id="startBox">
+        <div class="slHead secHead" onclick="toggleSection('startBox')">
+          <span>Start line &amp; timer</span><span class="secChevron">&#9662;</span>
         </div>
-        <div class="slResult" id="slResult">Ping the start-line end(s). Enter the wind (below) to see the favored end.</div>
-        <div class="slDist" id="slDist"></div>
-        <div class="slTimer">
-          <div class="tClock" id="tClock">5:00</div>
-          <div class="tBtns">
-            <span class="tMinWrap"><input id="tMin" type="number" min="1" max="30" value="5" inputmode="numeric"> min</span>
-            <button onclick="startTimer()">Start</button>
-            <button onclick="syncTimer()">Sync</button>
-            <button onclick="resetTimer()">Reset</button>
+        <div class="secBody">
+          <div class="slBtns">
+            <button id="slBtnRC" onclick="pingEnd('rc')">Ping RC&nbsp;(boat) end</button>
+            <button id="slBtnPin" onclick="pingEnd('pin')">Ping Pin end</button>
+            <button class="slClear" onclick="clearLine()">Clear line</button>
+          </div>
+          <div class="slResult" id="slResult">Ping the start-line end(s). Enter the wind (below) to see the favored end.</div>
+          <div class="slDist" id="slDist"></div>
+          <div class="slTimer">
+            <div class="tClock" id="tClock">5:00</div>
+            <div class="tBtns">
+              <span class="tMinWrap"><input id="tMin" type="number" min="1" max="30" value="5" inputmode="numeric"> min</span>
+              <button onclick="startTimer()">Start</button>
+              <button onclick="syncTimer()">Sync</button>
+              <button onclick="resetTimer()">Reset</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="guide" id="guide">
+      <div class="guide collapsible" id="guide">
         <div class="gHead">
-          <span class="gNext">Next mark: <b id="gMark">&mdash;</b></span>
+          <span class="gNext secHead" onclick="toggleSection('guide')">Next mark: <b id="gMark">&mdash;</b><span class="secChevron">&#9662;</span></span>
           <span class="gLegBtns"><button onclick="stepLeg(-1)">&#9664; prev</button><button onclick="stepLeg(1)">next &#9654;</button></span>
         </div>
+        <div class="secBody">
         <div class="windRow">
           <label for="windIn">Wind from</label>
           <input id="windIn" type="number" inputmode="numeric" min="0" max="359" step="1" placeholder="&mdash;">
@@ -541,6 +553,7 @@
         </div>
         <div class="tactics" id="tactics"></div>
         <div class="steer" id="steer">&mdash;</div>
+        </div>
       </div>
 
       <div class="mapCtrl">
@@ -1287,7 +1300,18 @@ function setupStartLine(){
   } else {
     if(pinBtn) pinBtn.style.display = "";
   }
+  setPhase("prestart");                                     // start tools open, next-mark collapsed
   updateLineInfo();
+}
+
+/* collapsible sections: pre-start shows the start tools, racing shows next-mark guidance */
+let racePhase = "prestart";
+function toggleSection(id){ const el = $(id); if(el) el.classList.toggle("collapsed"); }
+function setPhase(p){
+  racePhase = p;
+  const start = $("startBox"), guide = $("guide");
+  if(p === "racing"){ start && start.classList.add("collapsed"); guide && guide.classList.remove("collapsed"); }
+  else             { start && start.classList.remove("collapsed"); guide && guide.classList.add("collapsed"); }
 }
 
 function pingEnd(which){
@@ -1357,6 +1381,10 @@ function updateStartLive(){
     const wTrue = (w - ACTIVE_VAR)*Math.PI/180;
     const courseSide = (Math.cos(wTrue)*r.Le - Math.sin(wTrue)*r.Ln)/r.len;  // line normal · upwind
     ocs = dist > 0.5 && ((r.d > 0) === (courseSide > 0));
+  }
+  // auto-detect the start: after the gun, crossing to the course side = racing
+  if(racePhase === "prestart" && ocs && timerEnd != null && (timerEnd - Date.now()) < 0){
+    setPhase("racing"); track("race_started");
   }
   let html;
   if(ocs){ el.className = "slDist ocs"; html = `<b>OVER EARLY ${Math.round(dist)} m</b>`; }
