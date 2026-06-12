@@ -68,17 +68,12 @@
   .topbar{position:sticky; top:0; z-index:30; display:flex; align-items:center;
           justify-content:space-between; gap:10px; background:#fff;
           border-bottom:2px solid var(--ink); padding:8px 12px;}
-  .tabs{display:flex; gap:6px;}
-  .tab{appearance:none; border:2px solid var(--line); background:var(--panel); color:var(--ink);
-       border-radius:9px; padding:9px 16px; font-size:15px; font-weight:700; cursor:pointer;}
-  .tab.sel{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .barTitle{font-size:18px; font-weight:800; color:var(--accent); letter-spacing:.3px;}
   .topbar .gpsBtn{padding:9px 16px; min-height:42px; font-size:15px;}
-  .pager{display:flex; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
-         -webkit-overflow-scrolling:touch; scrollbar-width:none;}
-  .pager::-webkit-scrollbar{display:none;}
-  .page{flex:0 0 100%; width:100%; scroll-snap-align:start;
-        height:calc(100dvh - 59px); overflow-y:auto; -webkit-overflow-scrolling:touch;
-        padding:14px 14px 60px;}
+  /* single continuous page: Course then Live map stacked, one scroll */
+  .pager{display:block;}
+  .page{padding:14px 14px 0;}
+  .liveSep{margin:18px 0 6px;}
   /* ---- mode toggle + custom race form ---- */
   .modeToggle{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:14px 0 4px;}
   .modeBtn{appearance:none; border:2px solid var(--accent); background:#fff; color:var(--accent);
@@ -217,17 +212,16 @@
     .brandLogo{height:58px; width:58px;}
     .brand{gap:11px;}
   }
-  /* Tablet / desktop LANDSCAPE (e.g. iPad landscape): show Course and Map side-by-side
-     instead of swiping. Each column scrolls independently. */
+  /* Tablet / desktop LANDSCAPE (e.g. iPad landscape): show Course and the live map
+     side-by-side instead of stacked. The whole page scrolls as one. */
   @media (min-width:900px) and (min-height:680px) and (orientation:landscape){
     .wrap{max-width:1180px;}
-    .tabs{display:none;}                       /* no page-switching needed */
     .topbar{justify-content:flex-end;}         /* GPS button to the right */
-    .pager{overflow:visible; scroll-snap-type:none; gap:22px;}
-    .page{flex:1 1 0; width:auto; min-width:0; scroll-snap-align:none;}
+    .pager{display:flex; gap:22px; align-items:flex-start;}
+    .page{flex:1 1 0; min-width:0;}
+    .liveSep{display:none;}                     /* no divider needed between columns */
   }
-  /* Tablet PORTRAIT (e.g. iPad portrait): keep the swipe pages, but let the live
-     course map fill the full width of the screen. */
+  /* Tablet PORTRAIT (e.g. iPad portrait): let the live course map fill the full width. */
   @media (min-width:600px) and (orientation:portrait){
     .mapDiagram{max-width:none;}
     .mapNote{max-width:none;}
@@ -246,7 +240,7 @@
                   border-radius:8px; padding:10px 18px; font-size:16px; font-weight:700; cursor:pointer;}
   #valErrors{display:none; background:#fdecea; border:2px solid var(--warn); color:var(--warn);
              padding:10px 14px; border-radius:8px; margin-top:14px; font-size:15px; white-space:pre-line;}
-  footer{margin-top:26px; color:var(--muted); font-size:13px; border-top:2px solid var(--ink); padding-top:12px;}
+  footer{margin:26px 14px 0; color:var(--muted); font-size:13px; border-top:2px solid var(--ink); padding:12px 0 48px;}
   footer .discl{margin-bottom:2px;}
   .raceRule{color:var(--ink); font-size:15px; font-weight:600; border-top:2px solid var(--ink);
             padding-top:10px; margin-bottom:8px;}
@@ -358,10 +352,7 @@
 <div class="wrap">
 
   <div class="topbar">
-    <div class="tabs">
-      <button class="tab sel" data-pg="0" onclick="goPage(0)">Course</button>
-      <button class="tab" data-pg="1" onclick="goPage(1)">Map &middot; Live</button>
-    </div>
+    <span class="barTitle">Pro Race Ready</span>
     <button id="gpsBtn" class="gpsBtn" onclick="toggleGps()">Start GPS</button>
   </div>
 
@@ -461,36 +452,11 @@
           <tfoot></tfoot>
         </table>
       </div>
-
-      <footer>
-        <span class="discl">User Agreement: Use of this application is at your own risk. The developer
-        makes no warranties and accepts no liability for course errors, race results, or any damages
-        whatsoever arising from use of this application.</span>
-        <br><br>
-        Headings are fixed values from the course table (magnetic). Distances computed from mark GPS
-        positions and are approximate.
-        <br>
-        Live GPS shows speed over ground (SOG), course over ground (COG, magnetic), your position, and
-        next-mark guidance.
-        <br>
-        SOG/COG can read &mdash; until the phone is moving, and phone GPS can be jumpy at low speed.
-      </footer>
     </section>
 
-    <!-- ============ PAGE 1 : MAP (LIVE) ============ -->
-    <section class="page" id="pg1">
-      <header class="mapBrand">
-        <hr class="rule">
-        <div class="brand">
-          <img class="brandLogo" src="icon-192.png" alt="Pro Race Ready">
-          <div class="brandText">
-            <div class="appTitle">Pro Race Ready!</div>
-            <div class="creditsBand">By Raju Venkatraman<span class="sep">&bull;</span>646.300.2466</div>
-          </div>
-        </div>
-        <hr class="rule">
-      </header>
-
+    <!-- ============ LIVE MAP (same page, revealed after Set Course) ============ -->
+    <section class="page" id="pg1" style="display:none">
+      <hr class="rule liveSep">
       <div class="mapHead">
         <span id="mapCourse" class="mapCourse">&mdash;</span>
         <span id="gpsStatus" class="gpsStatus">GPS off</span>
@@ -549,23 +515,23 @@
       (<b>G</b>) when running. The <span style="color:#c026d3">faint dashed lines</span> from the mark are
       its laylines &mdash; once you reach one, you can lay the mark without pointing higher. Set the wind
       above for these to appear.</div>
-
-      <footer>
-        <span class="discl">User Agreement: Use of this application is at your own risk. The developer
-        makes no warranties and accepts no liability for course errors, race results, or any damages
-        whatsoever arising from use of this application.</span>
-        <br><br>
-        Headings are fixed values from the course table (magnetic). Distances computed from mark GPS
-        positions and are approximate.
-        <br>
-        Live GPS shows speed over ground (SOG), course over ground (COG, magnetic), your position, and
-        next-mark guidance.
-        <br>
-        SOG/COG can read &mdash; until the phone is moving, and phone GPS can be jumpy at low speed.
-      </footer>
     </section>
 
   </div>
+
+  <footer>
+    <span class="discl">User Agreement: Use of this application is at your own risk. The developer
+    makes no warranties and accepts no liability for course errors, race results, or any damages
+    whatsoever arising from use of this application.</span>
+    <br><br>
+    Headings are fixed values from the course table (magnetic). Distances computed from mark GPS
+    positions and are approximate.
+    <br>
+    Live GPS shows speed over ground (SOG), course over ground (COG, magnetic), your position, and
+    next-mark guidance.
+    <br>
+    SOG/COG can read &mdash; until the phone is moving, and phone GPS can be jumpy at low speed.
+  </footer>
 </div>
 
 <!--DATA_LOGIC_START-->
@@ -844,6 +810,7 @@ function setKycCourse(){
   kmsg("");
   state.committed = true;
   renderResult();
+  $("result").scrollIntoView({ behavior:"smooth", block:"nearest" });
 }
 
 function kmsg(text, isErr){ const e=$("kycMsg"); if(!e) return; e.textContent=text||""; e.className="cMsg"+(isErr?" err":""); }
@@ -870,6 +837,7 @@ function renderResult(){
 
   const displayCode = state.custom ? (fam.name || "Custom") : code;
   $("result").style.display = "block";
+  $("pg1").style.display = "block";      // reveal the live map section on the same page
   $("cCode").textContent = displayCode;
   $("cName").textContent = state.custom ? (laps + " lap" + (laps>1?"s":"")) : fam.name;
   $("mapCourse").textContent = displayCode;
@@ -1235,8 +1203,11 @@ function onPos(p){
   }
   if(cogT != null) geo.cogTrue = cogT;
 
-  // record track (down-sample: only add if moved > ~3 m)
-  if(!geo.lastPos || distNm(geo.lastPos, cur)*1852 > 3) geo.track.push({lat:cur.lat, lon:cur.lon});
+  // record a breadcrumb once we've moved > ~5 m from the LAST BREADCRUMB. (Comparing to
+  // geo.lastPos was the bug: it updates every fix, so at slow speed each tick was < 3 m
+  // from the previous and no points ever accumulated -> no trail.)
+  const lastBc = geo.track.length ? geo.track[geo.track.length-1] : null;
+  if(!lastBc || distNm(lastBc, cur)*1852 > 5) geo.track.push({lat:cur.lat, lon:cur.lon});
   if(geo.track.length > 4000) geo.track.shift();
 
   geo.prev = cur; geo.lastPos = cur; geo.acc = c.accuracy;
@@ -1404,7 +1375,7 @@ function setMode(mode){
                 pickedFam:state.pickedFam, pickedMark:state.pickedMark, committed:state.committed };
     state.custom = true;
     if(!$("markInputs").children.length) buildCustomForm();
-    $("result").style.display = "none"; $("mapCourse").innerHTML = "&mdash;";   // hide until Set Course
+    $("result").style.display = "none"; $("pg1").style.display = "none"; $("mapCourse").innerHTML = "&mdash;";   // hide until Set Course
   } else {
     // restore the KYC course context and the last KYC picker state
     ACTIVE_MARKS = MARKS; ACTIVE_HEADINGS = HEADINGS; ACTIVE_START = "CM"; ACTIVE_FINISH = "CM"; ACTIVE_VAR = MAG_VAR;
@@ -1414,7 +1385,7 @@ function setMode(mode){
     $("windIn").value = "";
     refreshPicker();
     if(state.committed){ renderResult(); }
-    else { $("result").style.display = "none"; $("mapCourse").innerHTML = "&mdash;"; }
+    else { $("result").style.display = "none"; $("pg1").style.display = "none"; $("mapCourse").innerHTML = "&mdash;"; }
   }
   track("mode_switch", { detail: mode });
 }
@@ -1540,7 +1511,8 @@ function setCustomCourse(){
   geo.seqArr = []; geo.targetIdx = 1; $("windIn").value = "";
   state.committed = true;
   renderResult();
-  cmsg("Course set — see the heading table here and the live course map on Map·Live.");
+  $("result").scrollIntoView({ behavior:"smooth", block:"nearest" });
+  cmsg("Course set — heading table and live map are below.");
   track("custom_set", { courseCode: "custom", detail: "marks="+parsed.order.length+"|laps="+customLaps });
 }
 
@@ -1794,25 +1766,11 @@ function authorize(via){
   // never on open — so we don't record a phantom default selection.
 }
 
-/* ---------- swipe pager nav ---------- */
-let lastPageTracked = -1;
-function setTab(i){
-  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("sel", +t.dataset.pg===i));
-  if(AUTHORIZED && i !== lastPageTracked){ lastPageTracked = i; track("page_view", { detail: i===1 ? "map" : "course" }); }
-}
+/* ---------- single-page nav: scroll to the live map section ---------- */
 function goPage(i){
-  const p = $("pager");
-  p.scrollTo({ left: i*p.clientWidth, behavior: "smooth" });
-  setTab(i);
+  const el = i===1 ? $("pg1") : $("pg0");
+  if(el && el.style.display !== "none") el.scrollIntoView({ behavior:"smooth", block:"start" });
 }
-(function initPager(){
-  const p = $("pager");
-  let raf = null;
-  p.addEventListener("scroll", ()=>{
-    if(raf) return;
-    raf = requestAnimationFrame(()=>{ raf=null; setTab(Math.round(p.scrollLeft / p.clientWidth)); });
-  }, { passive:true });
-})();
 
 // recompute tactics + efficient route live as the wind value is edited
 $("windIn").addEventListener("input", ()=>{ updateGuide(); drawBoatOverlay(); });
@@ -1834,6 +1792,7 @@ if(errs.length){
 buildPickers();
 refreshPicker();                       // no default course selected
 $("result").style.display = "none";    // table + map appear only after Set Course
+$("pg1").style.display = "none";       // live map section hidden until Set Course
 $("mapCourse").innerHTML = "&mdash;";
 drawWindCompass();                     // show the wind dial even before a course is set
 initGate();   // load remote config + run the access gate (splash stays until authorized)
