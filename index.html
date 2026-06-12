@@ -80,6 +80,16 @@
   .page{padding:14px 14px 0;}
   .liveSep{margin:18px 0 6px;}
   /* ---- mode toggle + custom race form ---- */
+  /* collapsible Course-setup section */
+  .setupBox{margin:14px 0 4px;}
+  .setupHead{display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;
+             font-size:16px; font-weight:800; color:var(--accent); padding:11px 12px;
+             border:2px solid var(--accent); border-radius:11px; background:#f1f6ff;}
+  .collapsible:not(.collapsed) .setupHead{border-bottom-left-radius:0; border-bottom-right-radius:0;}
+  .setupHead #setupHeadCode{color:var(--ink); font-weight:800;}
+  .setupBox .secBody{border:2px solid var(--accent); border-top:none; border-radius:0 0 11px 11px; padding:10px 12px 12px;}
+  .setupBox.collapsed .secBody{display:none;}
+  .setupBox .modeToggle{margin-top:0;}
   .modeToggle{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:14px 0 4px;}
   .modeBtn{appearance:none; border:2px solid var(--accent); background:#fff; color:var(--accent);
            border-radius:11px; padding:13px 8px; font-size:17px; font-weight:800; cursor:pointer; min-height:54px;}
@@ -459,6 +469,11 @@
 
       <div id="valErrors"></div>
 
+      <div class="setupBox collapsible" id="setupBox">
+        <div class="setupHead secHead" onclick="toggleSection('setupBox')">
+          <span>Course setup<b id="setupHeadCode"></b></span><span class="secChevron">&#9662;</span>
+        </div>
+        <div class="secBody">
       <div class="modeToggle">
         <button id="modeKyc" class="modeBtn sel" onclick="setMode('kyc')">KYC Wed Race</button>
         <button id="modeCustom" class="modeBtn" onclick="setMode('custom')">Custom Race</button>
@@ -521,6 +536,8 @@
           <div id="retrieveBox" class="retrieveBox" style="display:none"></div>
         </div>
       </div>
+        </div><!-- /secBody -->
+      </div><!-- /setupBox -->
 
       <div id="result">
         <div class="codeRow"><span id="cCode"></span><span id="cName"></span></div>
@@ -1009,6 +1026,8 @@ function renderResult(){
   const displayCode = state.custom ? (fam.name || "Custom") : code;
   $("result").style.display = "block";
   $("pg1").style.display = "block";      // reveal the live map section on the same page
+  const su = $("setupBox"); if(su) su.classList.add("collapsed");          // fold the picker once set
+  const sc = $("setupHeadCode"); if(sc) sc.innerHTML = " &mdash; " + displayCode;
   $("cCode").textContent = displayCode;
   $("cName").textContent = state.custom ? (laps + " lap" + (laps>1?"s":"")) : fam.name;
   $("mapCourse").textContent = displayCode;
@@ -2001,8 +2020,13 @@ function stepLeg(d){
 
 /* ================= CUSTOM RACE ================= */
 
+function expandSetup(){
+  const su = $("setupBox"); if(su) su.classList.remove("collapsed");
+  const sc = $("setupHeadCode"); if(sc) sc.textContent = "";
+}
 function setMode(mode){
   const custom = mode === "custom";
+  expandSetup();                         // changing mode -> open the picker
   $("modeKyc").classList.toggle("sel", !custom);
   $("modeCustom").classList.toggle("sel", custom);
   $("kycPicker").style.display = custom ? "none" : "block";
