@@ -69,11 +69,11 @@
           justify-content:space-between; gap:10px; background:#fff;
           border-bottom:2px solid var(--ink); padding:7px 12px;}
   .topbar .brand{padding:0; gap:11px; min-width:0;}        /* compact brand in the locked bar */
-  .topbar .brandLogo{height:54px; width:54px; border-radius:12px;}
-  .topbar .appTitle{font-size:24px; white-space:nowrap;}
-  .topbar .creditsBand{font-size:11.5px; padding:3px 9px;}
+  .topbar .brandLogo{height:56px; width:56px; border-radius:12px;}
+  .topbar .appTitle{font-size:28px; white-space:nowrap;}
+  .topbar .creditsBand{font-size:13px; padding:3px 10px;}
   .topbar .brandText{gap:5px; overflow:hidden;}            /* never push the GPS button off-screen */
-  .topbar .gpsBtn{flex:0 0 auto; padding:9px 15px; min-height:42px; font-size:15px;}
+  .topbar .gpsBtn{flex:0 0 auto; padding:7px 12px; min-height:40px; font-size:14px;}
   /* single continuous page: Course then Live map stacked, one scroll */
   .pager{display:block;}
   .page{padding:14px 14px 0;}
@@ -141,9 +141,10 @@
   .gpsOffNote b{color:#163a63;}
   .gMarkLtr{color:var(--accent); font-weight:800;}
   .gDir{font-weight:500; color:var(--muted); font-size:0.82em; white-space:nowrap;}
-  .posbar{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:baseline; margin:8px 2px; font-size:15px;}
-  .posbar .poslbl{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted);}
-  .posbar #livePos{font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums;}
+  .posbar{display:flex; flex-wrap:wrap; gap:4px 14px; align-items:baseline; margin:10px 2px; font-size:15px;}
+  .posbar .poslbl{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted); flex:1 0 100%;}
+  .posbar #livePos{flex:1 0 100%; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;
+                   letter-spacing:.2px; font-size:clamp(18px, 6vw, 30px); line-height:1.15;}
   .posbar #acc{color:var(--muted); font-size:13px;}
   .maphint{margin-top:10px; color:var(--muted); font-size:13px;}
   /* brand band: logo at full height to the left of the title + credits */
@@ -213,10 +214,10 @@
     td.pos{font-size:12.5px;}
     td.dist{font-size:15px;}
     .topbar{padding:6px 10px;}
-    .topbar .brandLogo{height:46px; width:46px;}
-    .topbar .appTitle{font-size:20px;}
-    .topbar .creditsBand{font-size:10.5px; padding:2px 8px;}
-    .topbar .gpsBtn{padding:8px 12px; min-height:40px; font-size:14px;}
+    .topbar .brandLogo{height:48px; width:48px;}
+    .topbar .appTitle{font-size:24px;}
+    .topbar .creditsBand{font-size:12px; padding:2px 9px;}
+    .topbar .gpsBtn{padding:6px 10px; min-height:38px; font-size:13px;}
   }
   /* Tablet / desktop LANDSCAPE (e.g. iPad landscape): show Course and the live map
      side-by-side instead of stacked. The whole page scrolls as one. */
@@ -373,7 +374,6 @@
     <section class="page" id="pg0">
       <header>
         <h1>Race Course Headings</h1>
-        <span class="portnote">ALL MARK ROUNDINGS TO PORT</span>
       </header>
 
       <div id="valErrors"></div>
@@ -527,14 +527,17 @@
     <span class="discl">User Agreement: Use of this application is at your own risk. The developer
     makes no warranties and accepts no liability for course errors, race results, or any damages
     whatsoever arising from use of this application.</span>
-    <br><br>
-    Headings are fixed values from the course table (magnetic). Distances computed from mark GPS
-    positions and are approximate.
-    <br>
-    Live GPS shows speed over ground (SOG), course over ground (COG, magnetic), your position, and
-    next-mark guidance.
-    <br>
-    SOG/COG can read &mdash; until the phone is moving, and phone GPS can be jumpy at low speed.
+    <!-- Informational notes hidden for now (kept here so they can be restored on request) -->
+    <div class="footNotes" style="display:none">
+      <br>
+      Headings are fixed values from the course table (magnetic). Distances computed from mark GPS
+      positions and are approximate.
+      <br>
+      Live GPS shows speed over ground (SOG), course over ground (COG, magnetic), your position, and
+      next-mark guidance.
+      <br>
+      SOG/COG can read &mdash; until the phone is moving, and phone GPS can be jumpy at low speed.
+    </div>
   </footer>
 </div>
 
