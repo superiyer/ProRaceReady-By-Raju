@@ -1043,6 +1043,7 @@ function renderResult(){
   drawDiagram(seqArr, "mapDiagram");   // course map lives on the live map page only
   updateGuide();                       // refresh next-mark panel for the new course
   setupStartLine();                    // KYC: pin = CM; Custom: ping both ends
+  setPhase("prestart");                // pre-start view: start tools shown, race/next-mark collapsed
 }
 
 /* ---------- SVG diagram (north up, to scale) ---------- */
@@ -1356,8 +1357,11 @@ function setupStartLine(){
   } else {
     if(pinBtn) pinBtn.style.display = "";
   }
-  setPhase("prestart");                                     // start tools open, next-mark collapsed
   updateLineInfo();
+}
+/* show the whole Start-line section only before the race; hide it once armed */
+function updateStartVisibility(){
+  const sb = $("startBox"); if(sb) sb.style.display = (raceStart != null) ? "none" : "";
 }
 
 /* collapsible sections: pre-start shows the start tools, racing shows next-mark guidance */
@@ -1367,9 +1371,9 @@ function setPhase(p){
   racePhase = p;
   const set = (id, collapsed)=>{ const el = $(id); if(el) el.classList.toggle("collapsed", collapsed); };
   const racing = (p === "racing");
-  set("startBox", racing);          // start tools fold away once racing
   set("guide",   !racing);          // next-mark opens when racing
   set("raceBox", !racing);          // race timer opens when racing
+  // the Start-line section is hidden entirely once racing (see updateStartVisibility)
 }
 
 function pingEnd(which){
@@ -1588,19 +1592,19 @@ function showCountdown(){
 function raceArm(t){                                  // auto-start at the gun (non-destructive)
   if(raceStart != null) return;
   raceStart = t; raceFinish = null; splits = []; armTargetIdx = geo.targetIdx;
-  retireCountdown();                                 // hide the start timer once racing
+  retireCountdown(); updateStartVisibility();         // hide the whole Start-line section once racing
   ensureRaceTick(); updateRaceTimer(); track("race_start", { detail:"gun" });
 }
 function raceStartManual(){
   ensureAudio();
   raceStart = Date.now(); raceFinish = null; splits = []; armTargetIdx = geo.targetIdx;
-  retireCountdown();
+  retireCountdown(); updateStartVisibility();
   ensureRaceTick(); updateRaceTimer(); track("race_start", { detail:"manual" });
 }
 function raceReset(){
   raceStart = null; raceFinish = null; splits = [];
   if(raceInt){ clearInterval(raceInt); raceInt = null; }
-  showCountdown();                                   // start timer available again (e.g. general recall)
+  showCountdown(); updateStartVisibility();           // start section back (e.g. general recall)
   updateRaceTimer(); track("race_reset");
 }
 /* called whenever the next-mark target moves (auto rounding OR manual prev/next) */
