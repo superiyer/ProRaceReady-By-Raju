@@ -107,6 +107,25 @@ which is bumped on every deploy so phones pull the new build.
   **lap/leg splits**, with **Mark / Undo / Finish / Reset** (and manual **Start**).
 - Auto-finish at the last mark with per-lap times + total. A lap = each CM passing.
 
+### v40–v46 — Race-day refinements
+- Start countdown **retires at the gun**; the whole **Start-line section hides once racing**
+  (back on a race Reset for general recalls).
+- **Confirm / Cancel** prompts on Race-timer **Reset** and **Finish** (finish time stamped at the tap);
+  **Start** hides once the race is running.
+- **Course setup** (mode toggle → Set Course) is now a **collapsible section** that folds on Set Course,
+  showing the chosen course in its header.
+- Wording/visibility tidy-ups: CM = Center Mark; "Ping RC boat end"; start-line legend moved into the
+  Start-line section and hidden once racing; footer hint hidden.
+
+### v47 — RC Race (committee-boat course)
+- New third mode **RC Race**: **ping the committee boat** (or type its position), then place each mark by
+  **magnetic bearing + distance (nm)** — Windward, Offset, Reach/Wing, Leeward, Pin, Finish.
+- Enter the **wind**, tap **Set Course**, and all marks are computed and plotted, with the **start line =
+  RC ↔ Pin** auto-set (favored-end works immediately).
+- Builds the **course sequence** (Windward → Offset → Reach → Leeward, repeated for laps) and feeds the
+  heading table, next-mark guidance, route, laylines, and race timer. W/L laps go leeward → windward
+  directly (no start rounding between laps). **Custom Race is unchanged.**
+
 ---
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

@@ -90,10 +90,23 @@
   .setupBox .secBody{border:2px solid var(--accent); border-top:none; border-radius:0 0 11px 11px; padding:10px 12px 12px;}
   .setupBox.collapsed .secBody{display:none;}
   .setupBox .modeToggle{margin-top:0;}
-  .modeToggle{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:14px 0 4px;}
+  .modeToggle{display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin:14px 0 4px;}
   .modeBtn{appearance:none; border:2px solid var(--accent); background:#fff; color:var(--accent);
-           border-radius:11px; padding:13px 8px; font-size:17px; font-weight:800; cursor:pointer; min-height:54px;}
+           border-radius:11px; padding:12px 5px; font-size:14.5px; font-weight:800; cursor:pointer; min-height:54px;
+           line-height:1.15;}
   .modeBtn.sel{background:var(--accent); color:#fff;}
+  /* RC race rows: label | bearing | distance */
+  .rcOrigin{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px;}
+  .rcOrigin .mkLbl{font-size:15px; font-weight:800; color:var(--cm);}
+  .rcPingBtn{appearance:none; border:2px solid var(--accent); background:var(--accent); color:#fff;
+             border-radius:8px; padding:9px 14px; font-size:15px; font-weight:800; cursor:pointer; min-height:44px;}
+  .rcOrigin input{flex:1 1 100px; font-size:15px; padding:9px 8px; border:2px solid var(--line); border-radius:8px;
+                  font-variant-numeric:tabular-nums; min-width:0;}
+  .rcRow{display:grid; grid-template-columns:90px 1fr 1fr; gap:8px; align-items:center; margin-bottom:8px;}
+  .rcRow .mkLbl{font-size:15px; font-weight:800; color:var(--ink);}
+  .rcRow input{font-size:16px; padding:9px 8px; border:2px solid var(--line); border-radius:8px; min-width:0;
+               font-variant-numeric:tabular-nums; text-align:center;}
+  .rcRow input:focus{border-color:var(--accent); outline:none;}
   .cstmTop{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-bottom:8px;}
   .cstmField{display:flex; flex-direction:column; gap:5px;}
   .cstmField > label{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted);}
@@ -476,6 +489,7 @@
         <div class="secBody">
       <div class="modeToggle">
         <button id="modeKyc" class="modeBtn sel" onclick="setMode('kyc')">KYC Wed Race</button>
+        <button id="modeRc" class="modeBtn" onclick="setMode('rc')">RC Race</button>
         <button id="modeCustom" class="modeBtn" onclick="setMode('custom')">Custom Race</button>
       </div>
 
@@ -534,6 +548,40 @@
           </div>
           <div id="cMsg" class="cMsg"></div>
           <div id="retrieveBox" class="retrieveBox" style="display:none"></div>
+        </div>
+      </div>
+
+      <div id="rcPicker" style="display:none">
+        <div class="step">
+          <h2>RC race &middot; bearing &amp; distance from the committee boat</h2>
+          <div class="rcOrigin">
+            <span class="mkLbl">RC boat</span>
+            <button type="button" class="rcPingBtn" onclick="pingRcOrigin()">Ping position</button>
+            <input id="rcLat" class="latIn" type="text" inputmode="text" placeholder="lat" autocomplete="off">
+            <input id="rcLon" class="lonIn" type="text" inputmode="text" placeholder="lon" autocomplete="off">
+          </div>
+          <div class="coordHint">Ping the anchored committee boat (or type its position). Each mark below is a
+            <b>magnetic bearing</b> (&deg;M) and <b>distance</b> (nm) from the RC boat. Windward &amp; Leeward are required.</div>
+          <div id="rcMarks"></div>
+          <div class="cstmTop">
+            <div class="cstmField">
+              <label>Magnetic variation</label>
+              <span class="varRow"><input id="rcVar" type="number" step="0.1" value="14" inputmode="decimal">
+              <select id="rcVarDir"><option value="W">&deg;W</option><option value="E">&deg;E</option></select></span>
+            </div>
+            <div class="cstmField">
+              <label>Wind from</label>
+              <span class="varRow"><input id="rcWind" type="number" min="0" max="359" step="1" inputmode="numeric" placeholder="&mdash;"> &deg;M</span>
+            </div>
+          </div>
+          <div class="cstmField">
+            <label>Laps</label>
+            <div class="grid laps" id="rcLapBtns"></div>
+          </div>
+          <div class="setBar">
+            <button class="setBtn" onclick="setRcCourse()">Set Course</button>
+          </div>
+          <div id="rcMsg" class="cMsg"></div>
         </div>
       </div>
         </div><!-- /secBody -->
@@ -774,6 +822,17 @@ function trueBrg(p, q){
   return (Math.atan2(y, x)*180/Math.PI + 360) % 360;
 }
 
+/* Destination point from an origin given a TRUE bearing (deg) and distance (nm).
+   Inverse of trueBrg/distNm; used to place RC-Race marks set as bearing + distance. */
+function destPoint(lat, lon, brgTrue, distNm){
+  const toR = Math.PI/180, d = distNm / NM_R, br = brgTrue*toR;
+  const lat1 = lat*toR, lon1 = lon*toR;
+  const lat2 = Math.asin(Math.sin(lat1)*Math.cos(d) + Math.cos(lat1)*Math.sin(d)*Math.cos(br));
+  const lon2 = lon1 + Math.atan2(Math.sin(br)*Math.sin(d)*Math.cos(lat1),
+                                 Math.cos(d) - Math.sin(lat1)*Math.sin(lat2));
+  return { lat: lat2/toR, lon: (((lon2/toR) + 540) % 360) - 180 };
+}
+
 /* Magnetic variation derived from the data itself: circular mean of
    (published magnetic heading - GPS-geometry true bearing) over all pairs.
    Positive => magnetic reads higher than true (westerly variation).
@@ -860,13 +919,18 @@ function lineBias(rc, pin, windMag){
   return { len, favored, adv: Math.abs(proj), bias: Math.abs(bias) };
 }
 
-/* Full mark sequence incl. CM roundings: CM, lap1..., CM, lap2..., CM, ... */
+/* Full mark sequence. KYC/custom round the start (CM) between laps; RC-Race W/L
+   courses go straight from leeward back to windward (family.noLapMark = true). */
 function fullSequence(family, mark, laps){
   const lap = family.seq[mark];
   const n = family.laps ? laps : 1;
   const out = [ACTIVE_START];
-  for(let i=0;i<n;i++){ out.push(...lap, i === n-1 ? ACTIVE_FINISH : ACTIVE_START); }
-  return out;   // ACTIVE_FINISH === ACTIVE_START for KYC, so unchanged there
+  for(let i=0;i<n;i++){
+    out.push(...lap);
+    if(i === n-1) out.push(ACTIVE_FINISH);
+    else if(!family.noLapMark) out.push(ACTIVE_START);
+  }
+  return out;
 }
 
 function courseCode(family, mark, laps){
@@ -915,13 +979,14 @@ function validateAll(){
 "use strict";
 /* ================= UI ================= */
 
-const state = { fam: FAMILIES[0], mark: "A", laps: 1, custom: false,
+const state = { fam: FAMILIES[0], mark: "A", laps: 1, custom: false, mode: "kyc",
                 pickedFam: false, pickedMark: false, committed: false };
 let lastKyc = { fam: FAMILIES[0], mark: "A", laps: 1,
                 pickedFam: false, pickedMark: false, committed: false };   // remembered KYC selection
 let coordFmt = "dec";                                     // 'dec' | 'dm'
 let customLaps = 1;
 let customFinishEdited = false;                           // true once user edits Finish
+let rcLaps = 1, rcLineRC = null, rcLinePin = null;        // RC-race laps + start-line ends
 
 /* live GPS state */
 const geo = {
@@ -1020,7 +1085,7 @@ function renderResult(){
     $("windNom").textContent = String(geo.nominalWind).padStart(3,"0") + "°";
     if($("windIn").value === "") $("windIn").value = geo.nominalWind;
     if(typeof AUTHORIZED !== "undefined" && AUTHORIZED)
-      track("course_select", { courseCode: code, detail: (state.custom?"custom":fam.code)+"|laps="+laps+"|mark="+mark });
+      track("course_select", { courseCode: code, detail: state.mode+"|laps="+laps+"|mark="+mark });
   }
 
   const displayCode = state.custom ? (fam.name || "Custom") : code;
@@ -1043,12 +1108,16 @@ function renderResult(){
     `<span class="fact">Legs <b>${legs.length}</b></span>`;
 
   let notes = "";
-  if(state.custom)
+  if(state.mode === "rc")
+    notes += `<div class="note">Marks placed by magnetic bearing &amp; distance from the RC boat (${varLbl} variation). Start line = RC &harr; Pin.</div>`;
+  else if(state.custom)
     notes += `<div class="note">Headings computed from your mark coordinates (magnetic, ${varLbl} variation).</div>`;
   if(fam.downwindFinish)
     notes += `<div class="note dw">Finishes DOWNWIND &mdash; leave the start/finish mark to STARBOARD, committee boat to port.</div>`;
   if(fam.note) notes += `<div class="note">${fam.note}</div>`;
-  if(fam.laps && laps>1)
+  if(fam.laps && laps>1 && state.mode === "rc")
+    notes += `<div class="note">${laps} laps &mdash; round leeward and head straight back up to windward; cross the start/finish line only at the finish.</div>`;
+  else if(fam.laps && laps>1)
     notes += `<div class="note">${laps} laps &mdash; pass ${startLbl} to <b>port</b> between laps; ${startLbl} to <b>starboard</b> only at the finish.</div>`;
   $("cNotes").innerHTML = notes;
 
@@ -1384,13 +1453,21 @@ function clearTrack(){ geo.track = []; drawBoatOverlay(); track("clear_track"); 
 /* KYC: the pin end IS CM (known) — auto-set it and hide the Pin button.
    Custom: ping both ends. Called when a course is committed / mode changes. */
 function setupStartLine(){
-  const pinBtn = $("slBtnPin");
-  if(!state.custom){
+  const pinBtn = $("slBtnPin"), rcBtn = $("slBtnRC");
+  if(state.mode === "rc"){
+    // RC race: both ends are known from the course (RC boat + Pin) — no pinging
+    geo.lineRC = rcLineRC ? { ...rcLineRC } : null;
+    geo.linePin = rcLinePin ? { ...rcLinePin } : null;
+    if(pinBtn) pinBtn.style.display = "none";
+    if(rcBtn)  rcBtn.style.display = "none";
+  } else if(!state.custom){
     const cm = ACTIVE_MARKS[ACTIVE_START];                 // CM is the KYC pin end
     if(cm) geo.linePin = { lat: cm.lat, lon: cm.lon };
     if(pinBtn) pinBtn.style.display = "none";
+    if(rcBtn)  rcBtn.style.display = "";
   } else {
     if(pinBtn) pinBtn.style.display = "";
+    if(rcBtn)  rcBtn.style.display = "";
   }
   updateLineInfo();
 }
@@ -1434,7 +1511,9 @@ function updateLineInfo(){
   if(bP)  bP.classList.toggle("done", !!pin && state.custom);
   if(!rc || !pin){
     el.className = "slResult";
-    if(!state.custom){
+    if(state.mode === "rc"){
+      el.innerHTML = "Start line = <b>RC boat &harr; Pin</b>. Add a <b>Pin</b> mark to see the favored end.";
+    } else if(!state.custom){
       el.innerHTML = "Sail to the <b>Race Committee boat</b> and tap <b>Ping RC boat</b>.";
     } else {
       el.innerHTML = rc ? "RC end set. Ping the <b>Pin</b> end."
@@ -2025,29 +2104,36 @@ function expandSetup(){
   const sc = $("setupHeadCode"); if(sc) sc.textContent = "";
 }
 function setMode(mode){
-  const custom = mode === "custom";
-  expandSetup();                         // changing mode -> open the picker
-  $("modeKyc").classList.toggle("sel", !custom);
-  $("modeCustom").classList.toggle("sel", custom);
-  $("kycPicker").style.display = custom ? "none" : "block";
-  $("customPicker").style.display = custom ? "block" : "none";
-  if(custom){
-    // remember the KYC picker state so we can restore it on the way back
+  // remember the KYC picker state when leaving KYC
+  if(state.mode === "kyc"){
     lastKyc = { fam:state.fam, mark:state.mark, laps:state.laps,
                 pickedFam:state.pickedFam, pickedMark:state.pickedMark, committed:state.committed };
-    state.custom = true;
-    if(!$("markInputs").children.length) buildCustomForm();
-    $("result").style.display = "none"; $("pg1").style.display = "none"; $("mapCourse").innerHTML = "&mdash;";   // hide until Set Course
-  } else {
-    // restore the KYC course context and the last KYC picker state
+  }
+  expandSetup();                         // changing mode -> open the picker
+  state.mode = mode;
+  $("modeKyc").classList.toggle("sel", mode==="kyc");
+  $("modeRc").classList.toggle("sel", mode==="rc");
+  $("modeCustom").classList.toggle("sel", mode==="custom");
+  $("kycPicker").style.display    = mode==="kyc"    ? "block" : "none";
+  $("rcPicker").style.display     = mode==="rc"     ? "block" : "none";
+  $("customPicker").style.display = mode==="custom" ? "block" : "none";
+  const hideResult = ()=>{ $("result").style.display="none"; $("pg1").style.display="none"; $("mapCourse").innerHTML="&mdash;"; };
+  if(mode === "kyc"){
     ACTIVE_MARKS = MARKS; ACTIVE_HEADINGS = HEADINGS; ACTIVE_START = "CM"; ACTIVE_FINISH = "CM"; ACTIVE_VAR = MAG_VAR;
     state.custom = false;
     state.fam = lastKyc.fam; state.mark = lastKyc.mark; state.laps = lastKyc.laps;
     state.pickedFam = lastKyc.pickedFam; state.pickedMark = lastKyc.pickedMark; state.committed = lastKyc.committed;
     $("windIn").value = "";
     refreshPicker();
-    if(state.committed){ renderResult(); }
-    else { $("result").style.display = "none"; $("pg1").style.display = "none"; $("mapCourse").innerHTML = "&mdash;"; }
+    if(state.committed){ renderResult(); } else { hideResult(); }
+  } else if(mode === "rc"){
+    state.custom = true;
+    if(!$("rcMarks").children.length) buildRcForm();
+    hideResult();
+  } else {                               // custom
+    state.custom = true;
+    if(!$("markInputs").children.length) buildCustomForm();
+    hideResult();
   }
   track("mode_switch", { detail: mode });
 }
@@ -2176,6 +2262,82 @@ function setCustomCourse(){
   $("result").scrollIntoView({ behavior:"smooth", block:"nearest" });
   cmsg("Course set — heading table and live map are below.");
   track("custom_set", { courseCode: "custom", detail: "marks="+parsed.order.length+"|laps="+customLaps });
+}
+
+/* ================= RC RACE (committee-boat bearing/distance) ================= */
+function rcmsg(text, isErr){ const e = $("rcMsg"); if(!e) return; e.textContent = text || ""; e.className = "cMsg" + (isErr ? " err" : ""); }
+
+function buildRcForm(){
+  const wrap = $("rcMarks"); if(!wrap) return;
+  wrap.innerHTML = "";
+  [["W","Windward"],["O","Offset"],["R","Reach / Wing"],["L","Leeward"],["P","Pin"],["F","Finish"]].forEach(([k,label])=>{
+    const div = document.createElement("div");
+    div.className = "rcRow";
+    div.innerHTML = `<span class="mkLbl">${label}</span>`+
+      `<input class="rcHdg" id="rcH_${k}" type="number" min="0" max="359" inputmode="numeric" placeholder="&deg;M" autocomplete="off">`+
+      `<input class="rcDist" id="rcD_${k}" type="number" min="0" step="0.01" inputmode="decimal" placeholder="nm" autocomplete="off">`;
+    wrap.appendChild(div);
+  });
+  const lb = $("rcLapBtns"); if(lb){
+    lb.innerHTML = "";
+    [1,2,3,4].forEach(n=>{
+      const b = mkBtn(`${n}<small>lap${n>1?"s":""}</small>`, n===rcLaps?"sel":"", ()=>{
+        rcLaps = n; document.querySelectorAll("#rcLapBtns .opt").forEach(x=>x.classList.toggle("sel", +x.dataset.laps===n));
+      });
+      b.dataset.laps = n; lb.appendChild(b);
+    });
+  }
+}
+
+function pingRcOrigin(){
+  if(!geo.lastPos){ rcmsg("Need a GPS fix to ping — Start GPS first (top right).", true); return; }
+  $("rcLat").value = geo.lastPos.lat.toFixed(6);
+  $("rcLon").value = geo.lastPos.lon.toFixed(6);
+  rcmsg("RC boat position pinged.");
+  track("rc_ping");
+}
+
+function setRcCourse(){
+  const oLat = parseCoord($("rcLat").value), oLon = parseCoord($("rcLon").value);
+  if(oLat == null || oLon == null){ rcmsg("Ping or enter the RC boat position.", true); return; }
+  const wind = parseFloat($("rcWind").value);
+  if(isNaN(wind)){ rcmsg("Enter the wind direction (°M).", true); return; }
+  const v = parseFloat($("rcVar").value);
+  const variation = (isNaN(v) ? 14 : Math.abs(v)) * ($("rcVarDir").value === "E" ? -1 : 1);
+  // each mark = RC origin + magnetic bearing + distance (nm); blank rows skipped
+  const mk = (k)=>{
+    const h = parseFloat($("rcH_"+k).value), d = parseFloat($("rcD_"+k).value);
+    if(isNaN(h) || isNaN(d) || d <= 0) return null;
+    const p = destPoint(oLat, oLon, h - variation, d);     // magnetic -> true for the geometry
+    return { lat: p.lat, lon: p.lon };
+  };
+  const W = mk("W"), O = mk("O"), R = mk("R"), L = mk("L"), P = mk("P"), F = mk("F");
+  if(!W || !L){ rcmsg("Windward and Leeward marks are required (bearing + distance).", true); return; }
+  // start/finish point = midpoint of the RC<->Pin line (or the RC boat if no pin)
+  const sl = P ? { lat:(oLat+P.lat)/2, lon:(oLon+P.lon)/2 } : { lat:oLat, lon:oLon };
+  const marks = { SL:{ lat:sl.lat, lon:sl.lon, name:"Start", dir:"Start/Finish" },
+                  W:{ ...W, name:"Windward", dir:"W" }, L:{ ...L, name:"Leeward", dir:"L" } };
+  if(O) marks.O = { ...O, name:"Offset",  dir:"Off" };
+  if(R) marks.R = { ...R, name:"Reach",   dir:"Reach" };
+  if(F) marks.F = { ...F, name:"Finish",  dir:"Fin" };
+  ACTIVE_VAR = variation;
+  ACTIVE_MARKS = marks;
+  ACTIVE_START = "SL";
+  ACTIVE_FINISH = F ? "F" : "SL";
+  ACTIVE_HEADINGS = computeHeadingMatrix(marks);
+  const order = ["W"]; if(O) order.push("O"); if(R) order.push("R"); order.push("L");   // windward -> (offset) -> (reach) -> leeward
+  const fam = { code:"RC", name:"RC course", dist:"rc", laps:true, noLapMark:true, seq:{} };
+  fam.seq[order[0]] = order;
+  state.fam = fam; state.mark = order[0]; state.laps = rcLaps; state.custom = true; state.mode = "rc";
+  rcLineRC = { lat:oLat, lon:oLon };                        // start-line ends for favored-end / ping
+  rcLinePin = P ? { lat:P.lat, lon:P.lon } : null;
+  geo.seqArr = []; geo.targetIdx = 1;
+  $("windIn").value = String(Math.round(((wind % 360) + 360) % 360));
+  state.committed = true;
+  renderResult();
+  $("result").scrollIntoView({ behavior:"smooth", block:"nearest" });
+  rcmsg("Course set — heading table and live map are below.");
+  track("rc_set", { courseCode:"rc", detail:"laps="+rcLaps+"|marks="+order.length });
 }
 
 /* ---------- shared (cloud) saved races ---------- */

@@ -4,8 +4,8 @@ const html = fs.readFileSync(__dirname + "/index.html", "utf8");
 const m = html.match(/<!--DATA_LOGIC_START-->\s*<script>([\s\S]*?)<\/script>\s*<!--DATA_LOGIC_END-->/);
 if (!m) { console.error("FAIL: data/logic block not found"); process.exit(1); }
 const { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll,
-        trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff, TAC, computeTactics, lineBias } =
-  new Function(m[1] + "\nreturn { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll, trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff, TAC, computeTactics, lineBias };")();
+        trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff, TAC, computeTactics, lineBias, destPoint } =
+  new Function(m[1] + "\nreturn { MARKS, HEADINGS, FAMILIES, fullSequence, courseCode, buildLegs, validateAll, trueBrg, MAG_VAR, trueToMag, bearingMag, angleDiff, TAC, computeTactics, lineBias, destPoint };")();
 
 let fails = 0;
 const check = (name, cond, detail) => {
@@ -154,5 +154,26 @@ check("null wind returns null tactics", computeTactics(90, null) === null);
   check("null wind => favored null",                  lineBias(rc, pin, null).favored === null);
 }
 
+
+// 21. destPoint — 1 nm true-north raises latitude by 1 arc-minute; 1 nm east at the equatorish
+{
+  const n = destPoint(40, -74, 0, 1);
+  check("destPoint 1nm N raises lat ~1/60 deg", Math.abs((n.lat-40) - 1/60) < 1e-3, String(n.lat));
+  check("destPoint 1nm N keeps lon ~same", Math.abs(n.lon + 74) < 1e-3, String(n.lon));
+  const e = destPoint(40, -74, 90, 1);
+  check("destPoint 1nm E raises lon (east)", e.lon > -74, String(e.lon));
+  check("destPoint 1nm E keeps lat ~same", Math.abs(e.lat-40) < 1e-3, String(e.lat));
+  // round trip: bearing/dist back to origin
+  const b = trueBrg({lat:40,lon:-74}, n), d = (function(){return Math.abs(0-((b+360)%360))<1 || Math.abs(360-b)<1;})();
+  check("destPoint N round-trips to ~000 bearing", d, String(b));
+}
+
+// 22. fullSequence respects noLapMark (RC W/L goes L->W between laps, no start rounding)
+{
+  const fam = { seq:{X:["A","B"]}, laps:true };
+  const famRC = { seq:{X:["A","B"]}, laps:true, noLapMark:true };
+  check("KYC-style inserts start between laps", fullSequence(fam,"X",2).join() === "CM,A,B,CM,A,B,CM", fullSequence(fam,"X",2).join());
+  check("noLapMark skips start between laps", fullSequence(famRC,"X",2).join() === "CM,A,B,A,B,CM", fullSequence(famRC,"X",2).join());
+}
 console.log(fails ? `\n${fails} FAILURES` : "\nALL TESTS PASSED");
 process.exit(fails ? 1 : 0);
