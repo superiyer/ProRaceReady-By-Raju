@@ -557,11 +557,12 @@
           <div class="rcOrigin">
             <span class="mkLbl">RC boat</span>
             <button type="button" class="rcPingBtn" onclick="pingRcOrigin()">Ping position</button>
-            <input id="rcLat" class="latIn" type="text" inputmode="text" placeholder="lat" autocomplete="off">
-            <input id="rcLon" class="lonIn" type="text" inputmode="text" placeholder="lon" autocomplete="off">
+            <input id="rcLat" class="latIn" type="text" inputmode="text" placeholder="40.4695" autocomplete="off">
+            <input id="rcLon" class="lonIn" type="text" inputmode="text" placeholder="-74.2065" autocomplete="off">
           </div>
-          <div class="coordHint">Ping the anchored committee boat (or type its position). Each mark below is a
-            <b>magnetic bearing</b> (&deg;M) and <b>distance</b> (nm) from the RC boat. Windward &amp; Leeward are required.</div>
+          <div class="coordHint">Ping the anchored committee boat (or type its position &mdash; example shown is KYC CM:
+            <b>40.4695</b>, <b>-74.2065</b>). Each mark below is a <b>magnetic bearing</b> (&deg;M) and
+            <b>distance</b> (nm) from the RC boat. Windward &amp; Leeward are required.</div>
           <div id="rcMarks"></div>
           <div class="cstmTop">
             <div class="cstmField">
@@ -1175,7 +1176,11 @@ function drawDiagram(seqArr, targetId){
     const y = (ACTIVE_MARKS[m].lat - cm.lat)*60;     // nm north
     pts[m]={x,y}; xs.push(x); ys.push(y);
   }
-  const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  // pad the extent ~1 nm beyond the marks on every side so the boat is visible
+  // while approaching (not clamped to the edge). The map is pinch-zoomable for detail.
+  const MARGIN_NM = 1.0;
+  const minX=Math.min(...xs)-MARGIN_NM, maxX=Math.max(...xs)+MARGIN_NM,
+        minY=Math.min(...ys)-MARGIN_NM, maxY=Math.max(...ys)+MARGIN_NM;
   const sc = Math.min((W-2*PAD)/(maxX-minX), (H-2*PAD)/(maxY-minY));
   diagramTx = { W, H, PAD, k, minX, minY, sc };
   const px = m => PAD + (pts[m].x-minX)*sc;
@@ -1343,10 +1348,10 @@ function updateMapNotes(){
 }
 
 /* keep a viewBox square and fully inside the course canvas [0,W]x[0,H];
-   zoom limited from whole-course (w=W) to 8x (w=W/8) */
+   zoom limited from whole-course (w=W) to ~16x (w=W/16) */
 function clampView(v){
   const W = diagramTx ? diagramTx.W : 420, H = diagramTx ? diagramTx.H : 420;
-  const w = Math.max(W/8, Math.min(W, v.w));   // square, so h follows w
+  const w = Math.max(W/16, Math.min(W, v.w));   // square, so h follows w
   const x = Math.max(0, Math.min(W - w, v.x));
   const y = Math.max(0, Math.min(H - w, v.y));
   return { x, y, w, h:w };
@@ -1360,7 +1365,8 @@ function applyMapZoom(){
   if(geo.view){ vb = clampView(geo.view); }
   else if(geo.zoom && geo.lastPos){
     const q = projXY(geo.lastPos.lat, geo.lastPos.lon);
-    vb = clampView({ x:q.x-75, y:q.y-75, w:150, h:150 });   // ~0.5 nm window, boat-centred
+    const half = 0.5 * diagramTx.sc;                         // ~1 nm window (nm-based, not pixels)
+    vb = clampView({ x:q.x-half, y:q.y-half, w:2*half, h:2*half });
   } else {
     vb = { x:0, y:0, w:W, h:H };
   }
