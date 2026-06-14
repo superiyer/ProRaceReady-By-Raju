@@ -1409,6 +1409,13 @@ function clampView(v){
 
 function applyMapZoom(){ renderMap(); }
 
+/* fast path for live gestures: just move the SVG viewBox (GPU) — no full re-render.
+   renderMap() is called once on gesture end to restore constant symbol sizes. */
+function setViewBoxOnly(vb){
+  const svg = document.querySelector("#mapDiagram svg");
+  if(svg) svg.setAttribute("viewBox", `${vb.x.toFixed(1)} ${vb.y.toFixed(1)} ${vb.w.toFixed(1)} ${vb.h.toFixed(1)}`);
+}
+
 function updateZoomBtn(){
   const active = geo.view ? "" : geo.fit;                  // manual pan -> no button lit
   const set = (id, on)=>{ const b=$(id); if(b) b.classList.toggle("on", on); };
@@ -1479,18 +1486,19 @@ function mapTouchMove(e){
     const m = _mid(e.touches[0], e.touches[1]);            // current midpoint -> pan with it
     geo.view = clampView({ x: fx - (m.x-rect.left)/rect.width*newW,
                            y: fy - (m.y-rect.top )/rect.height*newW, w:newW, h:newW });
-    applyMapZoom();
+    setViewBoxOnly(geo.view);                              // fast: viewBox only during the gesture
   } else if(_t.mode === "pan" && e.touches.length === 1){
     e.preventDefault();
     const sv = _t.startView, t = e.touches[0];
     const dx = (t.clientX - _t.last.x)/rect.width  * sv.w;
     const dy = (t.clientY - _t.last.y)/rect.height * sv.h;
     geo.view = clampView({ x: sv.x - dx, y: sv.y - dy, w: sv.w, h: sv.w });
-    applyMapZoom();
+    setViewBoxOnly(geo.view);
   }
 }
 
 function mapTouchEnd(e){
+  if(_t.mode) renderMap();                                 // finalize: redraw symbols at the settled zoom
   if(e.touches.length === 0) _t.mode = null;
   else if(e.touches.length === 1 && _t.mode === "pinch") _t.mode = null;  // pinch -> released one finger
 }
