@@ -708,7 +708,8 @@
             <line x1="19"  y1="12" x2="22.5" y2="12" stroke="currentColor" stroke-width="2"/>
           </svg>
         </button>
-        <button onclick="fitCourse()">Course</button>
+        <button id="courseBtn" class="on" onclick="fitCourse()">Course</button>
+        <button id="bothBtn" onclick="fitBoth()">Both</button>
         <button onclick="clearTrack()">Clear track</button>
       </div>
       <div id="mapDiagram" class="mapDiagram"></div>
@@ -1004,7 +1005,7 @@ let rcLaps = 1, rcLineRC = null, rcLinePin = null;        // RC-race laps + star
 /* live GPS state */
 const geo = {
   watchId: null, lastPos: null, prev: null, sogKt: null, cogTrue: null,
-  track: [], seqArr: [], targetIdx: 1, manual: false, zoom: false, nominalWind: null,
+  track: [], seqArr: [], targetIdx: 1, manual: false, fit: "course", nominalWind: null,
   view: null,   // manual pinch/pan viewBox {x,y,w,h} in diagram units, or null = whole course
   lineRC: null, linePin: null,   // start-line ends pinged by GPS ("ping the line")
 };
@@ -1091,7 +1092,7 @@ function renderResult(){
   const courseChanged = geo.seqArr.join() !== seqArr.join();
   if(courseChanged){
     geo.seqArr = seqArr; geo.targetIdx = 1; geo.manual = false;
-    geo.view = null; geo.zoom = false;     // reset zoom/pan for the new course
+    geo.view = null; geo.fit = "course";   // reset to the tight course view for the new course
     geo.lineRC = null; geo.linePin = null; // fresh start line for the new course
     raceReset();                           // clear race timing for the new course
     geo.nominalWind = Math.round(bearingMag(ACTIVE_MARKS[ACTIVE_START], ACTIVE_MARKS[fam.seq[mark][0]])) % 360;
@@ -1193,23 +1194,37 @@ function drawDiagram(seqArr, targetId){
   renderMap();
 }
 
-/* the visible window: manual pinch (geo.view) > zoom-to-boat > default auto-fit
-   (whole course PLUS the boat, so you see your boat in its true spot while approaching) */
+/* the visible window:
+   - manual pinch/pan (geo.view) wins
+   - "boat": ~1 nm window centred on the boat
+   - "both": fit the course AND the boat
+   - "course" (default): just the marks, tight — ignores the boat */
 function computeViewBox(){
   const W = diagramTx ? diagramTx.W : 420, H = diagramTx ? diagramTx.H : 420;
   if(!diagramTx) return { x:0, y:0, w:W, h:H };
   if(geo.view) return clampView(geo.view);
-  if(geo.zoom && geo.lastPos){
+  if(geo.fit === "boat" && geo.lastPos){
     const q = projXY(geo.lastPos.lat, geo.lastPos.lon), half = 0.5*diagramTx.sc;   // ~1 nm window
     return clampView({ x:q.x-half, y:q.y-half, w:2*half, h:2*half });
   }
-  let x0=0, y0=0, x1=W, y1=H;                       // the whole course canvas
-  if(geo.lastPos){
-    const b = projXY(geo.lastPos.lat, geo.lastPos.lon), pad = 0.15*diagramTx.sc;
-    x0=Math.min(x0,b.x-pad); y0=Math.min(y0,b.y-pad); x1=Math.max(x1,b.x+pad); y1=Math.max(y1,b.y+pad);
+  if(geo.fit === "both" && geo.lastPos){
+    const b = projXY(geo.lastPos.lat, geo.lastPos.lon), pad = 0.2*diagramTx.sc;
+    const x0=Math.min(0,b.x-pad), y0=Math.min(0,b.y-pad), x1=Math.max(W,b.x+pad), y1=Math.max(H,b.y+pad);
+    const w=Math.max(x1-x0,y1-y0), cx=(x0+x1)/2, cy=(y0+y1)/2;
+    return { x:cx-w/2, y:cy-w/2, w, h:w };
   }
-  const w=Math.max(x1-x0, y1-y0), cx=(x0+x1)/2, cy=(y0+y1)/2;   // square + centred
-  return { x:cx-w/2, y:cy-w/2, w, h:w };
+  return { x:0, y:0, w:W, h:H };                    // "course": whole course, tight
+}
+
+/* distance (nm) from the boat to the nearest course mark, or null */
+function boatToCourseNm(){
+  if(!geo.lastPos || !ACTIVE_MARKS) return null;
+  let best = Infinity;
+  for(const m of Object.keys(ACTIVE_MARKS)){
+    if(m === "SL") continue;                        // SL is a synthetic start-line midpoint
+    best = Math.min(best, distNm(geo.lastPos, ACTIVE_MARKS[m]));
+  }
+  return isFinite(best) ? best : null;
 }
 
 /* render the whole live map. Symbol sizes are multiplied by symK = viewBox/W so they
@@ -1361,6 +1376,11 @@ function updateMapNotes(){
     const q = projXY(geo.lastPos.lat, geo.lastPos.lon);
     if(q.x < 0 || q.x > diagramTx.W || q.y < 0 || q.y > diagramTx.H) showOff = true;
   }
+  if(showOff){
+    const d = boatToCourseNm();
+    off.innerHTML = `<b>Away from the course.</b> Boat is <b>${d!=null ? d.toFixed(2) : "&mdash;"} nm</b> from the nearest mark. `+
+                    `Tap <b>Both</b> to see boat + course, or the locate icon to follow the boat.`;
+  }
   noGps.style.display = showNoGps ? "block" : "none";
   off.style.display   = showOff   ? "block" : "none";
 }
@@ -1390,19 +1410,29 @@ function clampView(v){
 function applyMapZoom(){ renderMap(); }
 
 function updateZoomBtn(){
-  const b = $("zoomBtn"); if(b) b.classList.toggle("on", geo.zoom);   // locate icon lit while following the boat
+  const active = geo.view ? "" : geo.fit;                  // manual pan -> no button lit
+  const set = (id, on)=>{ const b=$(id); if(b) b.classList.toggle("on", on); };
+  set("zoomBtn", active === "boat");
+  set("courseBtn", active === "course");
+  set("bothBtn", active === "both");
 }
 
 function zoomToBoat(){
-  geo.zoom = true; geo.view = null;                        // follow the boat (~1 nm window)
+  geo.fit = "boat"; geo.view = null;                       // ~1 nm window on the boat
   if(!geo.lastPos) setGpsStatus("Start GPS to center on your boat", "err");
   renderMap();
   track("zoom_toggle", { detail: "boat" });
 }
 function fitCourse(){
-  geo.zoom = false; geo.view = null;                       // tight course (auto-fits the boat)
+  geo.fit = "course"; geo.view = null;                     // just the marks, tight (ignores the boat)
   renderMap();
   track("zoom_toggle", { detail: "course" });
+}
+function fitBoth(){
+  geo.fit = "both"; geo.view = null;                       // boat + course together
+  if(!geo.lastPos) setGpsStatus("Start GPS to show your boat with the course", "err");
+  renderMap();
+  track("zoom_toggle", { detail: "both" });
 }
 
 /* ---------- pinch-zoom + pan on the course map (bounded to the course) ---------- */
@@ -1420,7 +1450,7 @@ function mapTouchStart(e){
   if(!diagramTx || !document.querySelector("#mapDiagram svg")) return;
   if(e.touches.length === 2){
     e.preventDefault();
-    geo.zoom = false; geo.view = _curView();
+    geo.view = _curView();                     // manual view takes over from the fit mode
     _t.mode = "pinch"; _t.startDist = _dist(e.touches[0], e.touches[1]);
     _t.startView = { ...geo.view }; _t.rect = $("mapDiagram").getBoundingClientRect();
     _t.last = _mid(e.touches[0], e.touches[1]);
@@ -1428,7 +1458,7 @@ function mapTouchStart(e){
     const v = geo.view || _curView();
     if(v.w < diagramTx.W - 0.5){              // only pan when already zoomed in
       e.preventDefault();
-      geo.zoom = false; geo.view = v;
+      geo.view = v;
       _t.mode = "pan"; _t.startView = { ...v }; _t.rect = $("mapDiagram").getBoundingClientRect();
       _t.last = { x:e.touches[0].clientX, y:e.touches[0].clientY };
     } else { _t.mode = null; }                // not zoomed -> let the page scroll
