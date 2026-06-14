@@ -707,8 +707,8 @@
       </div>
 
       <div id="offGrid" class="mapNote offGrid" style="display:none">
-        <b>Away from the course.</b> GPS is on; your boat will appear on the diagram once
-        you're near the marks. Live position is in the data above.
+        <b>Away from the course.</b> The map has zoomed out to keep your boat in view &mdash;
+        it fills the screen again as you get closer.
       </div>
 
       <div class="posbar">
@@ -1162,77 +1162,117 @@ function projXY(lat, lon){
   return { x: t.PAD + (x - t.minX)*t.sc, y: t.H - t.PAD - (y - t.minY)*t.sc };
 }
 
+/* compute the transform that fits the marks to the canvas (tight, screen-padded),
+   then render. No nm margin — the view auto-fits the boat instead (computeViewBox). */
 function drawDiagram(seqArr, targetId){
-  if(!$(targetId)) return;             // target may not exist (e.g. course-page diagram removed)
+  if(!$(targetId || "mapDiagram")) return;
   const W=420, H=420, PAD=46;
   const cm = ACTIVE_MARKS[ACTIVE_START];
   const k = Math.cos(cm.lat*Math.PI/180);
-  const pts = {};
   let xs=[], ys=[];
-  // plot every mark used by this course (custom courses only define the marks in play)
-  const usedKeys = Object.keys(ACTIVE_MARKS);
-  for(const m of usedKeys){
-    const x = (ACTIVE_MARKS[m].lon - cm.lon)*60*k;   // nm east
-    const y = (ACTIVE_MARKS[m].lat - cm.lat)*60;     // nm north
-    pts[m]={x,y}; xs.push(x); ys.push(y);
+  for(const m of Object.keys(ACTIVE_MARKS)){
+    xs.push((ACTIVE_MARKS[m].lon - cm.lon)*60*k);   // nm east
+    ys.push((ACTIVE_MARKS[m].lat - cm.lat)*60);     // nm north
   }
-  // pad the extent ~1 nm beyond the marks on every side so the boat is visible
-  // while approaching (not clamped to the edge). The map is pinch-zoomable for detail.
-  const MARGIN_NM = 1.0;
-  const minX=Math.min(...xs)-MARGIN_NM, maxX=Math.max(...xs)+MARGIN_NM,
-        minY=Math.min(...ys)-MARGIN_NM, maxY=Math.max(...ys)+MARGIN_NM;
-  const sc = Math.min((W-2*PAD)/(maxX-minX), (H-2*PAD)/(maxY-minY));
+  const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  const spanX=Math.max(maxX-minX, 0.05), spanY=Math.max(maxY-minY, 0.05);   // avoid /0
+  const sc = Math.min((W-2*PAD)/spanX, (H-2*PAD)/spanY);
   diagramTx = { W, H, PAD, k, minX, minY, sc };
-  const px = m => PAD + (pts[m].x-minX)*sc;
-  const py = m => H - PAD - (pts[m].y-minY)*sc;   // invert: north up
+  renderMap();
+}
 
-  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
-  // north arrow
-  s += `<g stroke="#0b1220" fill="#0b1220"><line x1="${W-26}" y1="44" x2="${W-26}" y2="18" stroke-width="2"/>
-        <path d="M${W-26},12 l-5,10 h10 z"/><text x="${W-26}" y="58" font-size="13" text-anchor="middle" font-weight="700">N</text></g>`;
+/* the visible window: manual pinch (geo.view) > zoom-to-boat > default auto-fit
+   (whole course PLUS the boat, so you see your boat in its true spot while approaching) */
+function computeViewBox(){
+  const W = diagramTx ? diagramTx.W : 420, H = diagramTx ? diagramTx.H : 420;
+  if(!diagramTx) return { x:0, y:0, w:W, h:H };
+  if(geo.view) return clampView(geo.view);
+  if(geo.zoom && geo.lastPos){
+    const q = projXY(geo.lastPos.lat, geo.lastPos.lon), half = 0.5*diagramTx.sc;   // ~1 nm window
+    return clampView({ x:q.x-half, y:q.y-half, w:2*half, h:2*half });
+  }
+  let x0=0, y0=0, x1=W, y1=H;                       // the whole course canvas
+  if(geo.lastPos){
+    const b = projXY(geo.lastPos.lat, geo.lastPos.lon), pad = 0.15*diagramTx.sc;
+    x0=Math.min(x0,b.x-pad); y0=Math.min(y0,b.y-pad); x1=Math.max(x1,b.x+pad); y1=Math.max(y1,b.y+pad);
+  }
+  const w=Math.max(x1-x0, y1-y0), cx=(x0+x1)/2, cy=(y0+y1)/2;   // square + centred
+  return { x:cx-w/2, y:cy-w/2, w, h:w };
+}
 
-  // route with per-pair offset so repeated legs stay visible
-  const pairCount = {};
-  for(let i=0;i<seqArr.length-1;i++){
-    const a=seqArr[i], b=seqArr[i+1];
-    const key=[a,b].sort().join("-");
-    const idx=pairCount[key]||0; pairCount[key]=idx+1;
-    const off = idx===0 ? 0 : (idx%2===1?1:-1)*Math.ceil(idx/2)*7;
-    let x1=px(a), y1=py(a), x2=px(b), y2=py(b);
-    const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy)||1;
-    const ox=-dy/len*off, oy=dx/len*off;
-    // shorten ends so arrows don't sit on the mark circles
-    const t=14/len;
-    const sx1=x1+dx*t+ox, sy1=y1+dy*t+oy, sx2=x2-dx*t+ox, sy2=y2-dy*t+oy;
-    s += `<line x1="${sx1.toFixed(1)}" y1="${sy1.toFixed(1)}" x2="${sx2.toFixed(1)}" y2="${sy2.toFixed(1)}"
-          stroke="#0b4fb3" stroke-width="2.4"/>`;
-    // arrowhead drawn explicitly (iOS Safari lacks marker orient="auto-start-reverse")
-    const ang = Math.atan2(sy2-sy1, sx2-sx1), AL=9;
-    const w1 = ang + Math.PI - 0.45, w2 = ang + Math.PI + 0.45;
+/* render the whole live map. Symbol sizes are multiplied by symK = viewBox/W so they
+   stay a constant ON-SCREEN size at any zoom (don't balloon when zoomed in/out). */
+function renderMap(){
+  if(!diagramTx) return;
+  const host = $("mapDiagram"); if(!host) return;
+  const W = diagramTx.W;
+  const vb = computeViewBox();
+  const K = vb.w / W;                               // symbol scale
+  const P = m => projXY(ACTIVE_MARKS[m].lat, ACTIVE_MARKS[m].lon);
+  let s = `<svg viewBox="${vb.x.toFixed(1)} ${vb.y.toFixed(1)} ${vb.w.toFixed(1)} ${vb.h.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">`;
+  // north arrow, pinned to the top-right of the visible window
+  const ax = vb.x + vb.w - 26*K;
+  s += `<g stroke="#0b1220" fill="#0b1220" stroke-width="${(2*K).toFixed(2)}">`+
+       `<line x1="${ax.toFixed(1)}" y1="${(vb.y+44*K).toFixed(1)}" x2="${ax.toFixed(1)}" y2="${(vb.y+18*K).toFixed(1)}"/>`+
+       `<path d="M${ax.toFixed(1)},${(vb.y+12*K).toFixed(1)} l${(-5*K).toFixed(1)},${(10*K).toFixed(1)} h${(10*K).toFixed(1)} z"/>`+
+       `<text x="${ax.toFixed(1)}" y="${(vb.y+58*K).toFixed(1)}" font-size="${(13*K).toFixed(1)}" text-anchor="middle" font-weight="700" stroke="none">N</text></g>`;
+  // course route legs (numbered, with per-pair offset so repeated legs stay visible)
+  const seq = geo.seqArr || [], pairCount = {};
+  for(let i=0;i<seq.length-1;i++){
+    const a=seq[i], b=seq[i+1], key=[a,b].sort().join("-"), idx=pairCount[key]||0; pairCount[key]=idx+1;
+    const off = (idx===0 ? 0 : (idx%2===1?1:-1)*Math.ceil(idx/2)*7) * K;
+    const A=P(a), Bp=P(b); const dx=Bp.x-A.x, dy=Bp.y-A.y, len=Math.hypot(dx,dy)||1;
+    const ox=-dy/len*off, oy=dx/len*off, t=14*K/len;
+    const sx1=A.x+dx*t+ox, sy1=A.y+dy*t+oy, sx2=Bp.x-dx*t+ox, sy2=Bp.y-dy*t+oy;
+    s += `<line x1="${sx1.toFixed(1)}" y1="${sy1.toFixed(1)}" x2="${sx2.toFixed(1)}" y2="${sy2.toFixed(1)}" stroke="#0b4fb3" stroke-width="${(2.4*K).toFixed(2)}"/>`;
+    const ang=Math.atan2(sy2-sy1,sx2-sx1), AL=9*K, w1=ang+Math.PI-0.45, w2=ang+Math.PI+0.45;
     s += `<path d="M${sx2.toFixed(1)},${sy2.toFixed(1)} L${(sx2+AL*Math.cos(w1)).toFixed(1)},${(sy2+AL*Math.sin(w1)).toFixed(1)} L${(sx2+AL*Math.cos(w2)).toFixed(1)},${(sy2+AL*Math.sin(w2)).toFixed(1)} z" fill="#0b4fb3"/>`;
     const mx=(sx1+sx2)/2+ox*0.4, my=(sy1+sy2)/2+oy*0.4;
-    s += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="9" fill="#fff" stroke="#0b4fb3" stroke-width="1.5"/>
-          <text x="${mx.toFixed(1)}" y="${(my+4).toFixed(1)}" font-size="11" font-weight="800" text-anchor="middle" fill="#0b4fb3">${i+1}</text>`;
+    s += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="${(9*K).toFixed(1)}" fill="#fff" stroke="#0b4fb3" stroke-width="${(1.5*K).toFixed(2)}"/>`+
+         `<text x="${mx.toFixed(1)}" y="${(my+4*K).toFixed(1)}" font-size="${(11*K).toFixed(1)}" font-weight="800" text-anchor="middle" fill="#0b4fb3">${i+1}</text>`;
   }
-
+  // efficient route + laylines + start line (under the marks/boat)
+  s += buildRouteSvg(K) + buildStartLineSvg(K);
+  // breadcrumb track (down-sampled for smooth redraw at any zoom)
+  if(geo.track.length > 1){
+    const step = Math.max(1, Math.ceil(geo.track.length/300)), tp=[];
+    for(let i=0;i<geo.track.length;i+=step){ const q=projXY(geo.track[i].lat,geo.track[i].lon); tp.push(`${q.x.toFixed(1)},${q.y.toFixed(1)}`); }
+    const lp=projXY(geo.track[geo.track.length-1].lat,geo.track[geo.track.length-1].lon); tp.push(`${lp.x.toFixed(1)},${lp.y.toFixed(1)}`);
+    s += `<polyline points="${tp.join(" ")}" fill="none" stroke="#0a6e3a" stroke-width="${(2*K).toFixed(2)}" stroke-opacity="0.55" stroke-linejoin="round"/>`;
+  }
   // marks
-  for(const m of usedKeys){
-    const x=px(m), y=py(m), isCM=m===ACTIVE_START;
-    s += `<circle cx="${x}" cy="${y}" r="${isCM?12:11}" fill="${isCM?"#c2330a":"#0b1220"}"/>`;
-    s += `<text x="${x}" y="${y+4.5}" font-size="${isCM?10:13}" font-weight="800" text-anchor="middle" fill="#fff">${m}</text>`;
-    const dir = ACTIVE_MARKS[m].dir;
-    if(!isCM && dir) s += `<text x="${x}" y="${y-16}" font-size="11" text-anchor="middle" fill="#5b6472" font-weight="700">${dir}</text>`;
+  for(const m of Object.keys(ACTIVE_MARKS)){
+    const q=P(m), isCM=m===ACTIVE_START;
+    s += `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${((isCM?12:11)*K).toFixed(1)}" fill="${isCM?"#c2330a":"#0b1220"}"/>`;
+    s += `<text x="${q.x.toFixed(1)}" y="${(q.y+4.5*K).toFixed(1)}" font-size="${((isCM?10:13)*K).toFixed(1)}" font-weight="800" text-anchor="middle" fill="#fff">${m}</text>`;
+    const dir=ACTIVE_MARKS[m].dir;
+    if(!isCM && dir) s += `<text x="${q.x.toFixed(1)}" y="${(q.y-16*K).toFixed(1)}" font-size="${(11*K).toFixed(1)}" text-anchor="middle" fill="#5b6472" font-weight="700">${dir}</text>`;
   }
-  s += `<g class="boatLayer"></g>`;   // live position drawn here on each GPS tick
+  // boat + COG arrow (on top)
+  if(geo.lastPos){
+    const q=projXY(geo.lastPos.lat,geo.lastPos.lon), cx=q.x, cy=q.y;
+    if(geo.cogTrue != null){
+      const ang=(geo.cogTrue-90)*Math.PI/180, L=26*K, ex=cx+L*Math.cos(ang), ey=cy+L*Math.sin(ang);
+      s += `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#0a6e3a" stroke-width="${(3*K).toFixed(2)}"/>`;
+      const a1=ang+Math.PI-0.4, a2=ang+Math.PI+0.4, AL=9*K;
+      s += `<path d="M${ex.toFixed(1)},${ey.toFixed(1)} L${(ex+AL*Math.cos(a1)).toFixed(1)},${(ey+AL*Math.sin(a1)).toFixed(1)} L${(ex+AL*Math.cos(a2)).toFixed(1)},${(ey+AL*Math.sin(a2)).toFixed(1)} z" fill="#0a6e3a"/>`;
+    }
+    s += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(7*K).toFixed(1)}" fill="#0a6e3a" stroke="#fff" stroke-width="${(2.5*K).toFixed(2)}"/>`;
+    s += `<text x="${(cx+10*K).toFixed(1)}" y="${(cy-9*K).toFixed(1)}" font-size="${(11*K).toFixed(1)}" font-weight="700" fill="#0a6e3a">YOU</text>`;
+  }
   s += `</svg>`;
-  $(targetId).innerHTML = s;
-  drawBoatOverlay();                  // re-draw boat if GPS already running
+  host.innerHTML = s;
+  const zoomedIn = vb.w < W - 0.5;
+  host.style.touchAction = zoomedIn ? "none" : "pan-y";   // one finger pans only when zoomed in
+  updateZoomBtn(zoomedIn || geo.zoom);
+  updateMapNotes();
 }
 
 /* Most-efficient path from the boat to the next mark given the wind, plus the two
    relevant laylines from that mark. Straight when you can fetch it, a single tack
    (beat) or gybe (run) to the layline otherwise. Returns SVG in the map's px space. */
-function buildRouteSvg(){
+function buildRouteSvg(K){
+  K = K || 1;
   if(!diagramTx || !geo.lastPos) return "";
   const seq = geo.seqArr;
   if(!seq.length || geo.targetIdx >= seq.length) return "";
@@ -1249,85 +1289,51 @@ function buildRouteSvg(){
   // --- laylines: the two rays from the mark you'd be close-hauled / on-gybe along ---
   let lay = "";
   if(tac && (tac.mode === "beat" || tac.mode === "run")){
-    const ext = 2*Math.max(diagramTx.W, diagramTx.H);        // run past the canvas; SVG clips it
+    const ext = 4*Math.max(diagramTx.W, diagramTx.H);
     const rays = tac.mode === "beat"
-      ? [norm360(wTrue-beta+180), norm360(wTrue+beta+180)]   // close-hauled laylines (extend downwind)
-      : [norm360(wTrue-off),      norm360(wTrue+off)];        // gybe laylines (extend upwind)
+      ? [norm360(wTrue-beta+180), norm360(wTrue+beta+180)]
+      : [norm360(wTrue-off),      norm360(wTrue+off)];
     rays.forEach(b=>{
       const u = dir(b), ex = M.x+ext*u.x, ey = M.y+ext*u.y;
-      lay += `<line x1="${M.x.toFixed(1)}" y1="${M.y.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#c026d3" stroke-width="1.2" stroke-dasharray="5 5" stroke-opacity="0.45"/>`;
+      lay += `<line x1="${M.x.toFixed(1)}" y1="${M.y.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#c026d3" stroke-width="${(1.2*K).toFixed(2)}" stroke-dasharray="${(5*K).toFixed(1)} ${(5*K).toFixed(1)}" stroke-opacity="0.45"/>`;
     });
   }
 
-  // --- efficient route (only while the boat is on the diagram) ---
-  let route = "";
-  if(B.x>=0 && B.x<=diagramTx.W && B.y>=0 && B.y<=diagramTx.H){
-    // intersect leg1 (from B, course c1) with leg2 (into M, course c2): one tack/gybe
-    const oneTurn = (c1, c2)=>{
-      const u1=dir(c1), u2=dir(c2), det=u1.x*u2.y - u1.y*u2.x;
-      if(Math.abs(det) < 1e-6) return null;
-      const rx=M.x-B.x, ry=M.y-B.y;
-      const t1=(rx*u2.y - ry*u2.x)/det, s2=(u1.x*ry - u1.y*rx)/det;
-      if(t1 < -0.5 || s2 < -0.5) return null;                 // turn point behind boat/mark
-      if(t1 > 6*diagramTx.W || s2 > 6*diagramTx.W) return null; // absurdly long -> bail
-      return { x:B.x+t1*u1.x, y:B.y+t1*u1.y };
-    };
-    let pts = [B], turn = null;
-    if(tac && (tac.mode === "beat" || tac.mode === "run")){
-      const base = tac.mode === "beat"
-        ? [norm360(wTrue-beta),      norm360(wTrue+beta)]      // close-hauled courses (true)
-        : [norm360(wTrue+180-off),   norm360(wTrue+180+off)];  // broad-reach gybe courses (true)
-      const favTrue = norm360(tac.targetHdg - ACTIVE_VAR);     // favored tack first
-      const order = Math.abs(angleDiff(base[0],favTrue)) <= Math.abs(angleDiff(base[1],favTrue))
-                  ? base : [base[1], base[0]];
-      const P = oneTurn(order[0], order[1]) || oneTurn(order[1], order[0]);
-      if(P){ pts.push(P); turn = tac.mode === "beat" ? "T" : "G"; }
-    }
-    pts.push(M);
-    const path = pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-    route = `<polyline points="${path}" fill="none" stroke="#c026d3" stroke-width="2.6" stroke-dasharray="1.5 5" stroke-linecap="round" stroke-linejoin="round"/>`;
-    if(turn){
-      const P = pts[1];
-      route += `<circle cx="${P.x.toFixed(1)}" cy="${P.y.toFixed(1)}" r="7" fill="#fff" stroke="#c026d3" stroke-width="2"/>`;
-      route += `<text x="${P.x.toFixed(1)}" y="${(P.y+3.4).toFixed(1)}" font-size="9.5" font-weight="800" text-anchor="middle" fill="#c026d3">${turn}</text>`;
-    }
+  // --- efficient route (one tack/gybe to the layline) ---
+  const oneTurn = (c1, c2)=>{
+    const u1=dir(c1), u2=dir(c2), det=u1.x*u2.y - u1.y*u2.x;
+    if(Math.abs(det) < 1e-6) return null;
+    const rx=M.x-B.x, ry=M.y-B.y;
+    const t1=(rx*u2.y - ry*u2.x)/det, s2=(u1.x*ry - u1.y*rx)/det;
+    if(t1 < -0.5 || s2 < -0.5) return null;
+    if(t1 > 6*diagramTx.W || s2 > 6*diagramTx.W) return null;
+    return { x:B.x+t1*u1.x, y:B.y+t1*u1.y };
+  };
+  let pts = [B], turn = null;
+  if(tac && (tac.mode === "beat" || tac.mode === "run")){
+    const base = tac.mode === "beat"
+      ? [norm360(wTrue-beta),      norm360(wTrue+beta)]
+      : [norm360(wTrue+180-off),   norm360(wTrue+180+off)];
+    const favTrue = norm360(tac.targetHdg - ACTIVE_VAR);
+    const order = Math.abs(angleDiff(base[0],favTrue)) <= Math.abs(angleDiff(base[1],favTrue))
+                ? base : [base[1], base[0]];
+    const P = oneTurn(order[0], order[1]) || oneTurn(order[1], order[0]);
+    if(P){ pts.push(P); turn = tac.mode === "beat" ? "T" : "G"; }
+  }
+  pts.push(M);
+  const path = pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  let route = `<polyline points="${path}" fill="none" stroke="#c026d3" stroke-width="${(2.6*K).toFixed(2)}" stroke-dasharray="${(1.5*K).toFixed(1)} ${(5*K).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(turn){
+    const P = pts[1];
+    route += `<circle cx="${P.x.toFixed(1)}" cy="${P.y.toFixed(1)}" r="${(7*K).toFixed(1)}" fill="#fff" stroke="#c026d3" stroke-width="${(2*K).toFixed(2)}"/>`;
+    route += `<text x="${P.x.toFixed(1)}" y="${(P.y+3.4*K).toFixed(1)}" font-size="${(9.5*K).toFixed(1)}" font-weight="800" text-anchor="middle" fill="#c026d3">${turn}</text>`;
   }
   return lay + route;
 }
 
-/* draw track trail + boat + COG arrow into EVERY diagram's overlay layer */
-function drawBoatOverlay(){
-  if(!diagramTx) return;
-  const layers = document.querySelectorAll(".boatLayer");
-  if(!layers.length) return;
-  let s = "";
-  const W = diagramTx.W;
-  const clamp = (v)=>Math.max(5, Math.min(W-5, v));
-  // breadcrumb trail (this session only)
-  if(geo.track.length > 1){
-    const pts = geo.track.map(p=>{ const q=projXY(p.lat,p.lon); return `${clamp(q.x).toFixed(1)},${clamp(q.y).toFixed(1)}`; });
-    s += `<polyline points="${pts.join(" ")}" fill="none" stroke="#0a6e3a" stroke-width="2" stroke-opacity="0.55" stroke-linejoin="round"/>`;
-  }
-  if(geo.lastPos){
-    const q = projXY(geo.lastPos.lat, geo.lastPos.lon);
-    const cx = clamp(q.x), cy = clamp(q.y);
-    // COG arrow (magnetic shown, but drawn on a true-north canvas, so use true heading)
-    if(geo.cogTrue != null){
-      const ang = (geo.cogTrue-90)*Math.PI/180, L=26;
-      const ex = cx+L*Math.cos(ang), ey = cy+L*Math.sin(ang);
-      s += `<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#0a6e3a" stroke-width="3"/>`;
-      const a1=ang+Math.PI-0.4, a2=ang+Math.PI+0.4, AL=9;
-      s += `<path d="M${ex.toFixed(1)},${ey.toFixed(1)} L${(ex+AL*Math.cos(a1)).toFixed(1)},${(ey+AL*Math.sin(a1)).toFixed(1)} L${(ex+AL*Math.cos(a2)).toFixed(1)},${(ey+AL*Math.sin(a2)).toFixed(1)} z" fill="#0a6e3a"/>`;
-    }
-    s += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="7" fill="#0a6e3a" stroke="#fff" stroke-width="2.5"/>`;
-    s += `<text class="boatlbl" x="${(cx+10).toFixed(1)}" y="${(cy-9).toFixed(1)}" fill="#0a6e3a">YOU</text>`;
-  }
-  // efficient wind route + start line only on the live map
-  const mapExtra = buildStartLineSvg() + buildRouteSvg();
-  layers.forEach(l=>{ l.innerHTML = (l.closest("#mapDiagram") ? mapExtra : "") + s; });
-  applyMapZoom();
-  updateMapNotes();
-}
+/* redraw the live map (boat, track, route, etc.) — full re-render keeps symbols
+   a constant on-screen size at the current zoom. */
+function drawBoatOverlay(){ renderMap(); }
 
 /* Map-page explainer notes (mutually exclusive):
    - GPS off            -> "turn GPS on" hint
@@ -1357,25 +1363,7 @@ function clampView(v){
   return { x, y, w, h:w };
 }
 
-function applyMapZoom(){
-  const svg = document.querySelector("#mapDiagram svg");
-  if(!svg || !diagramTx) return;
-  const W = diagramTx.W, H = diagramTx.H;
-  let vb;
-  if(geo.view){ vb = clampView(geo.view); }
-  else if(geo.zoom && geo.lastPos){
-    const q = projXY(geo.lastPos.lat, geo.lastPos.lon);
-    const half = 0.5 * diagramTx.sc;                         // ~1 nm window (nm-based, not pixels)
-    vb = clampView({ x:q.x-half, y:q.y-half, w:2*half, h:2*half });
-  } else {
-    vb = { x:0, y:0, w:W, h:H };
-  }
-  svg.setAttribute("viewBox", `${vb.x.toFixed(1)} ${vb.y.toFixed(1)} ${vb.w.toFixed(1)} ${vb.h.toFixed(1)}`);
-  // when zoomed in, the map captures one-finger drags (pan); otherwise one finger scrolls the page
-  const zoomed = vb.w < W - 0.5;
-  const md = $("mapDiagram"); if(md) md.style.touchAction = zoomed ? "none" : "pan-y";
-  updateZoomBtn(zoomed);
-}
+function applyMapZoom(){ renderMap(); }
 
 function updateZoomBtn(zoomed){
   const b = $("zoomBtn"); if(!b) return;
@@ -1476,6 +1464,7 @@ function setupStartLine(){
     if(rcBtn)  rcBtn.style.display = "";
   }
   updateLineInfo();
+  if(diagramTx) renderMap();           // draw the start line immediately (RC mode sets both ends)
 }
 /* show the whole Start-line section only before the race; hide it once armed */
 function updateStartVisibility(){
@@ -1821,17 +1810,18 @@ function updateRaceTimer(){
 }
 
 /* start line drawn on the live map (favored end green, other grey) */
-function buildStartLineSvg(){
+function buildStartLineSvg(K){
+  K = K || 1;
   if(!diagramTx || !geo.lineRC || !geo.linePin) return "";
   const A = projXY(geo.lineRC.lat, geo.lineRC.lon);
   const B = projXY(geo.linePin.lat, geo.linePin.lon);
   const lb = lineBias(geo.lineRC, geo.linePin, getWind());
   const endMark = (P, label, fav)=>{
     const col = fav ? "#16a34a" : "#475569";
-    return `<circle cx="${P.x.toFixed(1)}" cy="${P.y.toFixed(1)}" r="6.5" fill="${col}" stroke="#fff" stroke-width="2"/>`+
-           `<text x="${P.x.toFixed(1)}" y="${(P.y-10).toFixed(1)}" font-size="11" font-weight="800" text-anchor="middle" fill="${col}">${label}</text>`;
+    return `<circle cx="${P.x.toFixed(1)}" cy="${P.y.toFixed(1)}" r="${(6.5*K).toFixed(1)}" fill="${col}" stroke="#fff" stroke-width="${(2*K).toFixed(2)}"/>`+
+           `<text x="${P.x.toFixed(1)}" y="${(P.y-10*K).toFixed(1)}" font-size="${(11*K).toFixed(1)}" font-weight="800" text-anchor="middle" fill="${col}">${label}</text>`;
   };
-  let s = `<line x1="${A.x.toFixed(1)}" y1="${A.y.toFixed(1)}" x2="${B.x.toFixed(1)}" y2="${B.y.toFixed(1)}" stroke="#0891b2" stroke-width="2.4" stroke-dasharray="7 4"/>`;
+  let s = `<line x1="${A.x.toFixed(1)}" y1="${A.y.toFixed(1)}" x2="${B.x.toFixed(1)}" y2="${B.y.toFixed(1)}" stroke="#0891b2" stroke-width="${(2.4*K).toFixed(2)}" stroke-dasharray="${(7*K).toFixed(1)} ${(4*K).toFixed(1)}"/>`;
   s += endMark(A, "RC",  lb && lb.favored === "rc");
   s += endMark(B, "PIN", lb && lb.favored === "pin");
   return s;
