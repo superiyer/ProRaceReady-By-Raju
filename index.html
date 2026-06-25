@@ -1437,7 +1437,7 @@ function renderRaceView(){
   // right: bold black arrow to the next mark (relative to heading)
   let gMark = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
     `<circle cx="50" cy="50" r="46" fill="none" stroke="#2a3a55" stroke-width="2"/>`;
-  if(hasGps && mrkBrg != null) gMark += rvArrow(norm(mrkBrg - effHdg), "#0b1220", {tipR:43, headLen:19, w:11, sw:8});
+  if(hasGps && mrkBrg != null) gMark += rvArrow(norm(mrkBrg - effHdg), "#ffd54a", {tipR:43, headLen:19, w:11, sw:8});
   gMark += `<circle cx="50" cy="50" r="4" fill="#fff"/></svg>`;
 
   const hdgTxt = hasHdg ? `${hdg3(hdg)}<span class="rvDeg">&deg;M</span>` : `&mdash;`;
