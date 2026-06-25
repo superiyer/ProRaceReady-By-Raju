@@ -1411,9 +1411,9 @@ function rvArrow(rot, color, o){
 /* thin wind arrow: tail on the rim in the wind-FROM direction, arrowhead pointing
    inward toward the boat at the centre. rot = wind-from bearing relative to the bow. */
 function rvWindArrow(rot){
-  const c="#22c55e", rimY=50-44, baseY=50-26, tipY=50-17, w=4.5;
+  const c="#22c55e", rimY=50-44, baseY=50-26, tipY=50-17, w=3.6;
   return `<g transform="rotate(${rot.toFixed(1)} 50 50)">`+
-    `<line x1="50" y1="${rimY}" x2="50" y2="${baseY}" stroke="${c}" stroke-width="2.6" stroke-linecap="round"/>`+
+    `<line x1="50" y1="${rimY}" x2="50" y2="${baseY}" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`+
     `<path d="M50,${tipY} L${(50-w).toFixed(1)},${baseY} L${(50+w).toFixed(1)},${baseY} Z" fill="${c}"/></g>`;
 }
 
@@ -1440,12 +1440,8 @@ function renderRaceView(){
   // wind comes FROM and points inward toward the boat (drawn on top so it stays visible).
   let gBoat = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
     `<circle cx="50" cy="50" r="46" fill="none" stroke="#274034" stroke-width="2"/>`;
-  // points-of-sail style boat seen from above, bow up: pointed bow, rounded stern, with
-  // the jib drawn as a curved line forward and the mainsail as a straight line aft.
-  gBoat += `<path d="M50,13 C61,28 64,52 57,76 C54,85 46,85 43,76 C36,52 39,28 50,13 Z" fill="#eef3f8" stroke="#0b1220" stroke-width="1.8" stroke-linejoin="round"/>`+
-           `<circle cx="50" cy="36" r="2.1" fill="#0b1220"/>`+                                                    /* mast */
-           `<path d="M50,17 Q61,27 51,35" fill="none" stroke="#0b1220" stroke-width="2.4" stroke-linecap="round"/>`+   /* jib (curved) */
-           `<line x1="50" y1="36" x2="57" y2="70" stroke="#0b1220" stroke-width="2.6" stroke-linecap="round"/>`;     /* mainsail (straight) */
+  // simple boat hull seen from above, bow up: pointed bow, rounded stern (no sails).
+  gBoat += `<path d="M50,18.5 C59.4,31.3 61.9,51.7 56,72.1 C53.4,79.8 46.6,79.8 44,72.1 C38.1,51.7 40.6,31.3 50,18.5 Z" fill="#eef3f8" stroke="#0b1220" stroke-width="1.8" stroke-linejoin="round"/>`;
   if(windFrom != null) gBoat += rvWindArrow(norm(windFrom - effHdg));
   gBoat += `</svg>`;
 
