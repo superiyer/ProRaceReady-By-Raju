@@ -169,7 +169,7 @@
   .posLeft{display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 auto;}
   .posbar .poslbl{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted);}
   .posbar #livePos{font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;
-                   letter-spacing:.2px; font-size:clamp(16px, 5.2vw, 26px); line-height:1.25;}
+                   letter-spacing:.2px; font-size:clamp(14px, 4.4vw, 22px); line-height:1.25;}
   .posbar #acc{color:var(--muted); font-size:13px;}
   /* wind input lives next to Position so it's always visible (and confirmable vs the green arrow) */
   .windBox{display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex:0 0 auto;}
@@ -177,7 +177,6 @@
   .windBox input{width:84px; font-size:24px; font-weight:800; text-align:center; padding:6px 6px;
        border:2px solid var(--accent); border-radius:8px; font-variant-numeric:tabular-nums;}
   .windBox .wu{font-size:14px; color:var(--muted); font-weight:700;}
-  .windBox .windNomBtn{margin-left:0;}
   .maphint{margin-top:10px; color:var(--muted); font-size:13px;}
   /* brand band: logo at full height to the left of the title + credits */
   .brand{display:flex; align-items:center; gap:14px; padding:6px 0;}
@@ -393,14 +392,6 @@
          border-radius:9px; background:#fff; border:1px solid var(--line);}
   .steer.stbd{color:var(--ok);} .steer.port{color:var(--cm);} .steer.on{color:var(--ink);}
   /* wind input + tactics */
-  .windRow{display:flex; align-items:center; gap:8px; margin:10px 0 8px; flex-wrap:wrap;}
-  .windRow label{font-size:14px; font-weight:700; color:var(--ink);}
-  .windRow input{width:78px; font-size:22px; font-weight:800; text-align:center; padding:6px 4px;
-       border:2px solid var(--accent); border-radius:8px; font-variant-numeric:tabular-nums;}
-  .windRow .wu{font-size:14px; color:var(--muted);}
-  .windNomBtn{appearance:none; border:1.5px solid var(--line); background:#fff; color:var(--muted);
-       border-radius:7px; padding:6px 10px; font-size:12.5px; font-weight:700; cursor:pointer; margin-left:auto;}
-  .windNomBtn b{color:var(--accent);}
   .tactics{margin-top:10px; padding:8px 12px; border-radius:9px; background:#fff; border:1px solid var(--line);}
   .tactics .tacLine{font-size:16px; font-weight:800; margin-bottom:6px;}
   .tactics .tacTacks{display:flex; gap:8px; flex-wrap:wrap;}
@@ -756,7 +747,6 @@
             <input id="windIn" type="number" inputmode="numeric" min="0" max="359" step="1" placeholder="&mdash;">
             <span class="wu">&deg;M</span>
           </div>
-          <button class="windNomBtn" onclick="useNominalWind()">use nominal <b id="windNom">&mdash;</b></button>
         </div>
       </div>
       <div class="maphint" style="display:none">Boat shows as a green dot with a heading arrow; your track trails behind.
@@ -1035,7 +1025,7 @@ let rcLaps = 1, rcLineRC = null, rcLinePin = null;        // RC-race laps + star
 /* live GPS state */
 const geo = {
   watchId: null, lastPos: null, prev: null, sogKt: null, cogTrue: null,
-  track: [], seqArr: [], targetIdx: 1, manual: false, fit: "course", nominalWind: null,
+  track: [], seqArr: [], targetIdx: 1, manual: false, fit: "course",
   view: null,   // manual pinch/pan viewBox {x,y,w,h} in diagram units, or null = whole course
   raceView: false,   // Race View (two-column heading/distance readout) replaces the map
   lineRC: null, linePin: null,   // start-line ends pinged by GPS ("ping the line")
@@ -1126,9 +1116,6 @@ function renderResult(){
     geo.view = null; geo.fit = "course";   // reset to the tight course view for the new course
     geo.lineRC = null; geo.linePin = null; // fresh start line for the new course
     raceReset();                           // clear race timing for the new course
-    geo.nominalWind = Math.round(bearingMag(ACTIVE_MARKS[ACTIVE_START], ACTIVE_MARKS[fam.seq[mark][0]])) % 360;
-    $("windNom").textContent = String(geo.nominalWind).padStart(3,"0") + "°";
-    if($("windIn").value === "") $("windIn").value = geo.nominalWind;
     if(typeof AUTHORIZED !== "undefined" && AUTHORIZED)
       track("course_select", { courseCode: code, detail: state.mode+"|laps="+laps+"|mark="+mark });
   }
@@ -2036,14 +2023,6 @@ function buildStartLineSvg(K){
 function getWind(){
   const v = parseFloat($("windIn").value);
   return isNaN(v) ? null : norm360(v);
-}
-function useNominalWind(){
-  if(geo.nominalWind == null) return;
-  $("windIn").value = geo.nominalWind;
-  updateGuide();
-  updateLineInfo();         // refresh favored end for the new wind
-  drawBoatOverlay();        // redraw route for the new wind
-  track("use_nominal", { detail: String(geo.nominalWind) });
 }
 
 /* ================= LIVE GPS ================= */
