@@ -1416,6 +1416,35 @@ function rvWindArrow(rot){
     `<path d="M50,${tipY} L${(50-w).toFixed(1)},${baseY} L${(50+w).toFixed(1)},${baseY} Z" fill="${c}"/></g>`;
 }
 
+/* magnetic compass rose for the Race View circles. rot = degrees the rose is turned so a
+   given heading sits at the top: pass the boat heading (heading-up, left) or 0 (north-up,
+   right). N is red; NE/E/SE/SW/W/NW lettered; the 8 in-between points are short ticks. */
+function rvCompass(rot){
+  const pts = [
+    [0,"N","card"],[22.5,"","min"],[45,"NE","int"],[67.5,"","min"],
+    [90,"E","card"],[112.5,"","min"],[135,"SE","int"],[157.5,"","min"],
+    [180,"S","card"],[202.5,"","min"],[225,"SW","int"],[247.5,"","min"],
+    [270,"W","card"],[292.5,"","min"],[315,"NW","int"],[337.5,"","min"]
+  ];
+  const pos = (b,r)=>({ x:50+r*Math.sin(b*Math.PI/180), y:50-r*Math.cos(b*Math.PI/180) });
+  let s = "";
+  for(const [b,lab,t] of pts){
+    const sb = b - rot;
+    const o = pos(sb,46);                         // notches sit on the circumference (ring r=46)
+    let len,w,col;
+    if(t==="card"){ len=4; w=2.2; col = lab==="N" ? "#ff5a4e" : "#9fb3d0"; }
+    else if(t==="int"){ len=3; w=1.7; col="#7e93ad"; }
+    else { len=2.5; w=1.2; col="#64788f"; }
+    const inr = pos(sb,46-len);
+    s += `<line x1="${o.x.toFixed(1)}" y1="${o.y.toFixed(1)}" x2="${inr.x.toFixed(1)}" y2="${inr.y.toFixed(1)}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`;
+    if(lab){
+      const isN = lab==="N", lp = pos(sb, t==="card"?38.5:39.5), fs = t==="card"?9:6.6;
+      s += `<text x="${lp.x.toFixed(1)}" y="${(lp.y+fs*0.35).toFixed(1)}" font-size="${fs}" font-weight="${isN?900:800}" text-anchor="middle" fill="${isN?"#ff5a4e":"#c2d0e2"}">${lab}</text>`;
+    }
+  }
+  return s;
+}
+
 function renderRaceView(){
   const host = $("raceView"); if(!host) return;
   const norm = x => ((x%360)+360)%360;
@@ -1435,19 +1464,22 @@ function renderRaceView(){
     if(hasGps){ mrkBrg = norm(bearingMag(geo.lastPos, ACTIVE_MARKS[tgt])); distnm = distNm(geo.lastPos, ACTIVE_MARKS[tgt]); }
   }
 
-  // left: boat fixed pointing up; thin green wind arrow starts on the circle where the
-  // wind comes FROM and points inward toward the boat (drawn on top so it stays visible).
+  // left: heading-up boat compass — boat fixed pointing up, the magnetic rose rotates so
+  // your heading sits at the top; thin green wind arrow points to where the wind comes FROM.
   let gBoat = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
-    `<circle cx="50" cy="50" r="46" fill="none" stroke="#274034" stroke-width="2"/>`;
+    `<circle cx="50" cy="50" r="46" fill="none" stroke="#2c4a3a" stroke-width="2"/>`+
+    rvCompass(effHdg);
   // simple boat hull seen from above, bow up: pointed bow, rounded stern (no sails).
   gBoat += `<path d="M50,18.5 C59.4,31.3 61.9,51.7 56,72.1 C53.4,79.8 46.6,79.8 44,72.1 C38.1,51.7 40.6,31.3 50,18.5 Z" fill="#eef3f8" stroke="#0b1220" stroke-width="1.8" stroke-linejoin="round"/>`;
   if(windFrom != null) gBoat += rvWindArrow(norm(windFrom - effHdg));
   gBoat += `</svg>`;
 
-  // right: bold black arrow to the next mark (relative to heading)
+  // right: north-up mark compass — N fixed at the top, the yellow arrow points to the
+  // next mark's actual magnetic bearing (so it lines up with the rose and the number).
   let gMark = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
-    `<circle cx="50" cy="50" r="46" fill="none" stroke="#2a3a55" stroke-width="2"/>`;
-  if(hasGps && mrkBrg != null) gMark += rvArrow(norm(mrkBrg - effHdg), "#ffd54a", {tipR:43, headLen:19, w:11, sw:8});
+    `<circle cx="50" cy="50" r="46" fill="none" stroke="#2a3a55" stroke-width="2"/>`+
+    rvCompass(0);
+  if(hasGps && mrkBrg != null) gMark += rvArrow(mrkBrg, "#ffd54a", {tipR:43, headLen:19, w:11, sw:8});
   gMark += `<circle cx="50" cy="50" r="4" fill="#fff"/></svg>`;
 
   const hdgTxt = hasHdg ? `${hdg3(hdg)}<span class="rvDeg">&deg;M</span>` : `&mdash;`;
@@ -1460,7 +1492,7 @@ function renderRaceView(){
 
   let note = "";
   if(!hasGps) note = "Start GPS (top-right) to point to the mark and read distance.";
-  else if(!hasHdg) note = "Move a little to get a heading &mdash; arrows are shown compass-up (north &uarr;) until then.";
+  else if(!hasHdg) note = "Move a little to get a heading &mdash; the boat compass shows north-up until then.";
 
   host.innerHTML =
     `<div class="rvCol rvBoat">`+
