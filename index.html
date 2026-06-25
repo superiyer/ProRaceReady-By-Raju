@@ -165,11 +165,19 @@
   .gpsOffNote b{color:#163a63;}
   .gMarkLtr{color:var(--accent); font-weight:800;}
   .gDir{font-weight:500; color:var(--muted); font-size:0.82em; white-space:nowrap;}
-  .posbar{display:flex; flex-wrap:wrap; gap:4px 14px; align-items:baseline; margin:10px 2px; font-size:15px;}
-  .posbar .poslbl{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted); flex:1 0 100%;}
-  .posbar #livePos{flex:1 0 100%; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;
-                   letter-spacing:.2px; font-size:clamp(18px, 6vw, 30px); line-height:1.15;}
+  .posbar{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin:10px 2px; font-size:15px;}
+  .posLeft{display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 auto;}
+  .posbar .poslbl{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted);}
+  .posbar #livePos{font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;
+                   letter-spacing:.2px; font-size:clamp(16px, 5.2vw, 26px); line-height:1.25;}
   .posbar #acc{color:var(--muted); font-size:13px;}
+  /* wind input lives next to Position so it's always visible (and confirmable vs the green arrow) */
+  .windBox{display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex:0 0 auto;}
+  .windBox .windInRow{display:flex; align-items:center; gap:6px;}
+  .windBox input{width:84px; font-size:24px; font-weight:800; text-align:center; padding:6px 6px;
+       border:2px solid var(--accent); border-radius:8px; font-variant-numeric:tabular-nums;}
+  .windBox .wu{font-size:14px; color:var(--muted); font-weight:700;}
+  .windBox .windNomBtn{margin-left:0;}
   .maphint{margin-top:10px; color:var(--muted); font-size:13px;}
   /* brand band: logo at full height to the left of the title + credits */
   .brand{display:flex; align-items:center; gap:14px; padding:6px 0;}
@@ -697,12 +705,6 @@
           <span class="gLegBtns"><button onclick="stepLeg(-1)">&#9664; prev</button><button onclick="stepLeg(1)">next &#9654;</button></span>
         </div>
         <div class="secBody">
-        <div class="windRow">
-          <label for="windIn">Wind from</label>
-          <input id="windIn" type="number" inputmode="numeric" min="0" max="359" step="1" placeholder="&mdash;">
-          <span class="wu">&deg;M</span>
-          <button class="windNomBtn" onclick="useNominalWind()">use nominal <b id="windNom">&mdash;</b></button>
-        </div>
         <div class="gStats">
           <div class="stat"><div class="lbl">Brg to mark</div><div class="val" id="gBrg">&mdash;</div><div class="unit">&deg;M</div></div>
           <div class="stat"><div class="lbl">Dist to go</div><div class="val" id="gDist">&mdash;</div><div class="unit">nm</div></div>
@@ -743,9 +745,19 @@
       </div>
 
       <div class="posbar">
-        <span class="poslbl">Position</span>
-        <span id="livePos">&mdash;</span>
-        <span id="acc"></span>
+        <div class="posLeft">
+          <span class="poslbl">Position</span>
+          <span id="livePos">&mdash;</span>
+          <span id="acc"></span>
+        </div>
+        <div class="windBox">
+          <label class="poslbl" for="windIn">Wind from</label>
+          <div class="windInRow">
+            <input id="windIn" type="number" inputmode="numeric" min="0" max="359" step="1" placeholder="&mdash;">
+            <span class="wu">&deg;M</span>
+          </div>
+          <button class="windNomBtn" onclick="useNominalWind()">use nominal <b id="windNom">&mdash;</b></button>
+        </div>
       </div>
       <div class="maphint" style="display:none">Boat shows as a green dot with a heading arrow; your track trails behind.
       The <span style="color:#c026d3;font-weight:800">magenta dotted line</span> is the most efficient
@@ -2157,7 +2169,7 @@ function updateLive(){
 /* position formatter for arbitrary lat/lon (mirrors fmtPos for stored marks) */
 function fmtPos2(lat, lon){
   const part = (v)=>{ const a=Math.abs(v), d=Math.floor(a); return d+"&deg;"+((a-d)*60).toFixed(2).padStart(5,"0")+"&prime;"; };
-  return `${part(lat)} ${lat>=0?"N":"S"} &nbsp; ${part(lon).replace(/^(\d+)/,m=>m.padStart(3,"0"))} ${lon<0?"W":"E"}`;
+  return `${part(lat)} ${lat>=0?"N":"S"}<br>${part(lon).replace(/^(\d+)/,m=>m.padStart(3,"0"))} ${lon<0?"W":"E"}`;
 }
 
 /* wind/compass rose on the map (north-up): amber arrow points to windward
