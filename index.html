@@ -424,8 +424,11 @@
   .rvGfx svg{width:min(46vw,170px); height:min(46vw,170px); display:block;}
   .rvSub{font-size:clamp(24px,8vw,44px); font-weight:900; line-height:1.05; color:#fff; text-align:center; font-variant-numeric:tabular-nums;}
   .rvSub small{display:block; font-size:.5em; font-weight:800; color:#9fb3d0; letter-spacing:.04em;}
-  .rvSub.rvYd{font-size:clamp(18px,6vw,32px); color:#cfe0f5; margin-top:3px;}
+  .rvSub .rvU{font-size:.42em; font-weight:800; color:#9fb3d0; letter-spacing:.04em;}
   .rvNote{grid-column:1 / -1; text-align:center; padding:6px 10px 10px; color:#ffd54a; font-size:12.5px; font-weight:700;}
+  .rvSteer{grid-column:1 / -1; text-align:center; padding:9px 10px; font-size:clamp(20px,6.5vw,32px);
+       font-weight:900; letter-spacing:.02em; border-top:2px solid #25324a;}
+  .rvSteer.on{color:#34d36b;} .rvSteer.turn{color:#ffd54a;}
   .boatlbl{font:700 11px -apple-system,"Segoe UI",sans-serif;}
   tr.activeLeg td{background:#eaf2ff;}
   tr.activeLeg td.fromto{box-shadow:inset 4px 0 0 var(--accent);}
@@ -1474,25 +1477,38 @@ function renderRaceView(){
   if(windFrom != null) gBoat += rvWindArrow(norm(windFrom - effHdg));
   gBoat += `</svg>`;
 
-  // right: north-up mark compass — N fixed at the top, the yellow arrow points to the
-  // next mark's actual magnetic bearing (so it lines up with the rose and the number).
+  // right: heading-up mark compass — bow is 'up' and the rose turns with your heading, just
+  // like the boat circle. The arrow leans off straight-up by exactly your steering error, so
+  // arrow up = dead on the mark. Goes green when you're within 5 degrees.
+  const steer = (hasHdg && mrkBrg != null) ? angleDiff(effHdg, mrkBrg) : null;   // + = mark to starboard
+  const onCourse = steer != null && Math.abs(steer) <= 5;
   let gMark = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
     `<circle cx="50" cy="50" r="46" fill="none" stroke="#2a3a55" stroke-width="2"/>`+
-    rvCompass(0);
-  if(hasGps && mrkBrg != null) gMark += rvArrow(mrkBrg, "#ffd54a", {tipR:43, headLen:19, w:11, sw:8});
+    rvCompass(effHdg);
+  if(hasGps && mrkBrg != null) gMark += rvArrow(norm(mrkBrg - effHdg), onCourse ? "#34d36b" : "#ffd54a", {tipR:43, headLen:19, w:11, sw:8});
   gMark += `<circle cx="50" cy="50" r="4" fill="#fff"/></svg>`;
 
   const hdgTxt = hasHdg ? `${hdg3(hdg)}<span class="rvDeg">&deg;M</span>` : `&mdash;`;
   const sogTxt = sog!=null ? `${sog.toFixed(1)} <small>KNOTS&nbsp;SOG</small>` : `&mdash; <small>SOG</small>`;
   const brgTxt = mrkBrg!=null ? `${hdg3(mrkBrg)}<span class="rvDeg">&deg;M</span>` : `&mdash;`;
   const yd = distnm!=null ? Math.round(distnm*2025.37) : null;
+  // mirror the SOG footer: big nm number (aligns with SOG), yards on the small second line
   const distHtml = distnm!=null
-    ? `<div class="rvSub">${distnm.toFixed(2)} <small>NM</small></div><div class="rvSub rvYd">${yd.toLocaleString()} <small>YARDS</small></div>`
-    : `<div class="rvSub">&mdash; <small>DISTANCE</small></div>`;
+    ? `${distnm.toFixed(2)} <span class="rvU">NM</span><small>${yd.toLocaleString()}&nbsp;YARDS</small>`
+    : `&mdash; <small>DISTANCE</small>`;
+
+  // steering cue spanning both columns: how far / which way to turn onto the mark
+  let steerHtml = "";
+  if(steer != null){
+    const ad = Math.abs(Math.round(steer));
+    if(onCourse) steerHtml = `<div class="rvSteer on">&#9650; ON COURSE</div>`;
+    else if(steer > 0) steerHtml = `<div class="rvSteer turn">STEER RIGHT ${ad}&deg; &#9654;</div>`;
+    else steerHtml = `<div class="rvSteer turn">&#9664; STEER LEFT ${ad}&deg;</div>`;
+  }
 
   let note = "";
   if(!hasGps) note = "Start GPS (top-right) to point to the mark and read distance.";
-  else if(!hasHdg) note = "Move a little to get a heading &mdash; the boat compass shows north-up until then.";
+  else if(!hasHdg) note = "Move a little to get a heading &mdash; the compasses show north-up until then.";
 
   host.innerHTML =
     `<div class="rvCol rvBoat">`+
@@ -1505,8 +1521,9 @@ function renderRaceView(){
       `<div class="rvLbl">To mark ${markLbl || "&mdash;"}</div>`+
       `<div class="rvBig">${brgTxt}</div>`+
       `<div class="rvGfx">${gMark}</div>`+
-      `<div>${distHtml}</div>`+
+      `<div class="rvSub">${distHtml}</div>`+
     `</div>`+
+    steerHtml +
     (note ? `<div class="rvNote">${note}</div>` : "");
   updateZoomBtn();
 }
