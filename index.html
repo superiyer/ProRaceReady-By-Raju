@@ -411,6 +411,22 @@
   .mapCtrl button.on{background:var(--accent); border-color:var(--accent); color:#fff;}
   .mapCtrl .iconBtn{display:inline-flex; align-items:center; justify-content:center; padding:7px 11px;}
   .mapCtrl .iconBtn svg{display:block;}
+  /* Race View — big two-column heading/distance readout that replaces the map */
+  .raceView{margin-top:6px; border:2px solid var(--ink); border-radius:14px; overflow:hidden;
+       display:grid; grid-template-columns:1fr 1fr; background:#0b1220;}
+  .rvCol{display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+       padding:14px 8px 16px; min-height:300px; gap:6px;}
+  .rvCol.rvBoat{background:#0e1f16;} .rvCol.rvMark{background:#13243d; border-left:2px solid #25324a;}
+  .rvLbl{font-size:13px; font-weight:800; letter-spacing:.08em; color:#9fb3d0; text-transform:uppercase;}
+  .rvBoat .rvLbl{color:#7fd6a3;}
+  .rvBig{font-size:clamp(34px,11vw,64px); font-weight:900; line-height:1; color:#fff; font-variant-numeric:tabular-nums;}
+  .rvBig .rvDeg{font-size:.5em; font-weight:800; vertical-align:super; color:#9fb3d0;}
+  .rvGfx{width:100%; flex:1; display:flex; align-items:center; justify-content:center;}
+  .rvGfx svg{width:min(46vw,170px); height:min(46vw,170px); display:block;}
+  .rvSub{font-size:clamp(24px,8vw,44px); font-weight:900; line-height:1.05; color:#fff; text-align:center; font-variant-numeric:tabular-nums;}
+  .rvSub small{display:block; font-size:.5em; font-weight:800; color:#9fb3d0; letter-spacing:.04em;}
+  .rvSub.rvYd{font-size:clamp(18px,6vw,32px); color:#cfe0f5; margin-top:3px;}
+  .rvNote{grid-column:1 / -1; text-align:center; padding:6px 10px 10px; color:#ffd54a; font-size:12.5px; font-weight:700;}
   .boatlbl{font:700 11px -apple-system,"Segoe UI",sans-serif;}
   tr.activeLeg td{background:#eaf2ff;}
   tr.activeLeg td.fromto{box-shadow:inset 4px 0 0 var(--accent);}
@@ -648,28 +664,6 @@
         </div>
       </div>
 
-      <div class="guide collapsible" id="guide">
-        <div class="gHead">
-          <span class="gNext secHead" onclick="toggleSection('guide')">Next mark: <b id="gMark">&mdash;</b><span class="secChevron">&#9662;</span></span>
-          <span class="gLegBtns"><button onclick="stepLeg(-1)">&#9664; prev</button><button onclick="stepLeg(1)">next &#9654;</button></span>
-        </div>
-        <div class="secBody">
-        <div class="windRow">
-          <label for="windIn">Wind from</label>
-          <input id="windIn" type="number" inputmode="numeric" min="0" max="359" step="1" placeholder="&mdash;">
-          <span class="wu">&deg;M</span>
-          <button class="windNomBtn" onclick="useNominalWind()">use nominal <b id="windNom">&mdash;</b></button>
-        </div>
-        <div class="gStats">
-          <div class="stat"><div class="lbl">Brg to mark</div><div class="val" id="gBrg">&mdash;</div><div class="unit">&deg;M</div></div>
-          <div class="stat"><div class="lbl">Dist to go</div><div class="val" id="gDist">&mdash;</div><div class="unit">nm</div></div>
-          <div class="stat"><div class="lbl">Leg heading</div><div class="val" id="gLegHdg">&mdash;</div><div class="unit">&deg;M</div></div>
-        </div>
-        <div class="tactics" id="tactics"></div>
-        <div class="steer" id="steer">&mdash;</div>
-        </div>
-      </div>
-
       <div class="raceTimer collapsible collapsed" id="raceBox">
         <div class="rtHead secHead" onclick="toggleSection('raceBox')">
           <span>Race timer <b class="rtHeadClock" id="rtHeadClock"></b></span><span class="secChevron">&#9662;</span>
@@ -697,7 +691,30 @@
         </div>
       </div>
 
+      <div class="guide collapsible" id="guide">
+        <div class="gHead">
+          <span class="gNext secHead" onclick="toggleSection('guide')">Next mark: <b id="gMark">&mdash;</b><span class="secChevron">&#9662;</span></span>
+          <span class="gLegBtns"><button onclick="stepLeg(-1)">&#9664; prev</button><button onclick="stepLeg(1)">next &#9654;</button></span>
+        </div>
+        <div class="secBody">
+        <div class="windRow">
+          <label for="windIn">Wind from</label>
+          <input id="windIn" type="number" inputmode="numeric" min="0" max="359" step="1" placeholder="&mdash;">
+          <span class="wu">&deg;M</span>
+          <button class="windNomBtn" onclick="useNominalWind()">use nominal <b id="windNom">&mdash;</b></button>
+        </div>
+        <div class="gStats">
+          <div class="stat"><div class="lbl">Brg to mark</div><div class="val" id="gBrg">&mdash;</div><div class="unit">&deg;M</div></div>
+          <div class="stat"><div class="lbl">Dist to go</div><div class="val" id="gDist">&mdash;</div><div class="unit">nm</div></div>
+          <div class="stat"><div class="lbl">Leg heading</div><div class="val" id="gLegHdg">&mdash;</div><div class="unit">&deg;M</div></div>
+        </div>
+        <div class="tactics" id="tactics"></div>
+        <div class="steer" id="steer">&mdash;</div>
+        </div>
+      </div>
+
       <div class="mapCtrl">
+        <button id="raceViewBtn" onclick="toggleRaceView()">Race View</button>
         <button id="zoomBtn" class="iconBtn" onclick="zoomToBoat()" title="Zoom to boat" aria-label="Zoom to boat">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
             <circle cx="12" cy="12" r="6.4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -713,6 +730,7 @@
         <button onclick="clearTrack()">Clear track</button>
       </div>
       <div id="mapDiagram" class="mapDiagram"></div>
+      <div id="raceView" class="raceView" style="display:none"></div>
 
       <div id="gpsOffNote" class="mapNote gpsOffNote" style="display:none">
         <b>GPS is off.</b> Seeing your boat needs GPS on <b>and</b> being near the course.
@@ -1007,6 +1025,7 @@ const geo = {
   watchId: null, lastPos: null, prev: null, sogKt: null, cogTrue: null,
   track: [], seqArr: [], targetIdx: 1, manual: false, fit: "course", nominalWind: null,
   view: null,   // manual pinch/pan viewBox {x,y,w,h} in diagram units, or null = whole course
+  raceView: false,   // Race View (two-column heading/distance readout) replaces the map
   lineRC: null, linePin: null,   // start-line ends pinged by GPS ("ping the line")
 };
 const ROUND_NM = 0.027;   // ~50 m: within this of the target mark => advance to next leg
@@ -1191,6 +1210,7 @@ function drawDiagram(seqArr, targetId){
   const spanX=Math.max(maxX-minX, 0.05), spanY=Math.max(maxY-minY, 0.05);   // avoid /0
   const sc = Math.min((W-2*PAD)/spanX, (H-2*PAD)/spanY);
   diagramTx = { W, H, PAD, k, minX, minY, sc };
+  exitRaceView();        // a freshly set course starts on the map, not the Race View
   renderMap();
 }
 
@@ -1360,7 +1380,94 @@ function buildRouteSvg(K){
 
 /* redraw the live map (boat, track, route, etc.) — full re-render keeps symbols
    a constant on-screen size at the current zoom. */
-function drawBoatOverlay(){ renderMap(); }
+function drawBoatOverlay(){ if(geo.raceView) renderRaceView(); else renderMap(); }
+
+/* ---------- Race View: big two-column heading + distance-to-mark readout ----------
+   Replaces the map area. Heading-up: the boat is fixed pointing up and the wind/mark
+   arrows rotate to where those things are RELATIVE to the boat's current heading. */
+function toggleRaceView(){
+  setRaceView(!geo.raceView);
+  track("race_view", { detail: geo.raceView ? "on" : "off" });
+}
+function setRaceView(on){
+  geo.raceView = on;
+  const rv = $("raceView"), md = $("mapDiagram");
+  if(rv) rv.style.display = on ? "grid" : "none";
+  if(md) md.style.display = on ? "none" : "block";
+  if(on){ ["gpsOffNote","offGrid"].forEach(id=>{ const e=$(id); if(e) e.style.display="none"; }); }
+  if(on) renderRaceView(); else { updateZoomBtn(); renderMap(); }
+}
+
+/* vertical arrow from the centre, rotated clockwise by rot degrees (0 = pointing up) */
+function rvArrow(rot, color, o){
+  o = o || {};
+  const tipR=o.tipR||42, headLen=o.headLen||18, w=o.w||10, sw=o.sw||7, tailR=o.tailR||0;
+  const tipY=50-tipR, baseY=50-(tipR-headLen), tailY=50+tailR;
+  return `<g transform="rotate(${rot.toFixed(1)} 50 50)">`+
+    `<line x1="50" y1="${tailY.toFixed(1)}" x2="50" y2="${baseY.toFixed(1)}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`+
+    `<path d="M50,${tipY.toFixed(1)} L${(50-w).toFixed(1)},${baseY.toFixed(1)} L${(50+w).toFixed(1)},${baseY.toFixed(1)} Z" fill="${color}"/></g>`;
+}
+
+function renderRaceView(){
+  const host = $("raceView"); if(!host) return;
+  const norm = x => ((x%360)+360)%360;
+  const hasGps = !!geo.lastPos;
+  const hasHdg = geo.cogTrue != null;
+  const hdg = hasHdg ? norm(trueToMag(geo.cogTrue)) : null;
+  const effHdg = hasHdg ? hdg : 0;                       // north-up fallback before there's a heading
+  const sog = geo.sogKt;
+  const windFrom = getWind();
+
+  // next mark — the same target the guidance panel is steering toward
+  const seq = geo.seqArr || [];
+  let markLbl=null, mrkBrg=null, distnm=null;
+  if(seq.length && geo.targetIdx < seq.length){
+    const tgt = seq[geo.targetIdx];
+    markLbl = tgt;
+    if(hasGps){ mrkBrg = norm(bearingMag(geo.lastPos, ACTIVE_MARKS[tgt])); distnm = distNm(geo.lastPos, ACTIVE_MARKS[tgt]); }
+  }
+
+  // left: boat fixed pointing up + green arrow showing where the wind comes FROM
+  let gBoat = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
+    `<circle cx="50" cy="50" r="46" fill="none" stroke="#274034" stroke-width="2"/>`;
+  if(windFrom != null) gBoat += rvArrow(norm(windFrom - effHdg), "#22c55e", {tipR:46, headLen:13, w:7, sw:5, tailR:6});
+  gBoat += `<path d="M50,24 C58,41 58,61 50,75 C42,61 42,41 50,24 Z" fill="#eef3f8" stroke="#0b1220" stroke-width="1.4"/>`+
+           `<line x1="50" y1="31" x2="50" y2="66" stroke="#0b1220" stroke-width="1.3"/></svg>`;
+
+  // right: bold black arrow to the next mark (relative to heading)
+  let gMark = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
+    `<circle cx="50" cy="50" r="46" fill="none" stroke="#2a3a55" stroke-width="2"/>`;
+  if(hasGps && mrkBrg != null) gMark += rvArrow(norm(mrkBrg - effHdg), "#0b1220", {tipR:43, headLen:19, w:11, sw:8});
+  gMark += `<circle cx="50" cy="50" r="4" fill="#fff"/></svg>`;
+
+  const hdgTxt = hasHdg ? `${hdg3(hdg)}<span class="rvDeg">&deg;M</span>` : `&mdash;`;
+  const sogTxt = sog!=null ? `${sog.toFixed(1)} <small>KNOTS&nbsp;SOG</small>` : `&mdash; <small>SOG</small>`;
+  const brgTxt = mrkBrg!=null ? `${hdg3(mrkBrg)}<span class="rvDeg">&deg;M</span>` : `&mdash;`;
+  const yd = distnm!=null ? Math.round(distnm*2025.37) : null;
+  const distHtml = distnm!=null
+    ? `<div class="rvSub">${distnm.toFixed(2)} <small>NM</small></div><div class="rvSub rvYd">${yd.toLocaleString()} <small>YARDS</small></div>`
+    : `<div class="rvSub">&mdash; <small>DISTANCE</small></div>`;
+
+  let note = "";
+  if(!hasGps) note = "Start GPS (top-right) to point to the mark and read distance.";
+  else if(!hasHdg) note = "Move a little to get a heading &mdash; arrows are shown compass-up (north &uarr;) until then.";
+
+  host.innerHTML =
+    `<div class="rvCol rvBoat">`+
+      `<div class="rvLbl">Your heading</div>`+
+      `<div class="rvBig">${hdgTxt}</div>`+
+      `<div class="rvGfx">${gBoat}</div>`+
+      `<div class="rvSub">${sogTxt}</div>`+
+    `</div>`+
+    `<div class="rvCol rvMark">`+
+      `<div class="rvLbl">To mark ${markLbl || "&mdash;"}</div>`+
+      `<div class="rvBig">${brgTxt}</div>`+
+      `<div class="rvGfx">${gMark}</div>`+
+      `<div>${distHtml}</div>`+
+    `</div>`+
+    (note ? `<div class="rvNote">${note}</div>` : "");
+  updateZoomBtn();
+}
 
 /* Map-page explainer notes (mutually exclusive):
    - GPS off            -> "turn GPS on" hint
@@ -1417,25 +1524,38 @@ function setViewBoxOnly(vb){
 }
 
 function updateZoomBtn(){
-  const active = geo.view ? "" : geo.fit;                  // manual pan -> no button lit
+  const active = geo.raceView ? "" : (geo.view ? "" : geo.fit);   // race view / manual pan -> no fit button lit
   const set = (id, on)=>{ const b=$(id); if(b) b.classList.toggle("on", on); };
+  set("raceViewBtn", geo.raceView);
   set("zoomBtn", active === "boat");
   set("courseBtn", active === "course");
   set("bothBtn", active === "both");
 }
 
+/* leaving Race View just un-hides the map; the caller re-renders it */
+function exitRaceView(){
+  if(!geo.raceView) return;
+  geo.raceView = false;
+  const rv = $("raceView"), md = $("mapDiagram");
+  if(rv) rv.style.display = "none";
+  if(md) md.style.display = "block";
+}
+
 function zoomToBoat(){
+  exitRaceView();
   geo.fit = "boat"; geo.view = null;                       // ~1 nm window on the boat
   if(!geo.lastPos) setGpsStatus("Start GPS to center on your boat", "err");
   renderMap();
   track("zoom_toggle", { detail: "boat" });
 }
 function fitCourse(){
+  exitRaceView();
   geo.fit = "course"; geo.view = null;                     // just the marks, tight (ignores the boat)
   renderMap();
   track("zoom_toggle", { detail: "course" });
 }
 function fitBoth(){
+  exitRaceView();
   geo.fit = "both"; geo.view = null;                       // boat + course together
   if(!geo.lastPos) setGpsStatus("Start GPS to show your boat with the course", "err");
   renderMap();

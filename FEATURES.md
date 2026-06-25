@@ -16,6 +16,9 @@ Created by Raju Venkatraman.
 - ⏱️ **Start timer** with one-tap **ISAF 5·4·1** sequence — beeps, vibrates & flashes at 5/4/1 min and the gun
 
 ## During the race
+- 🎛️ **Race View** — a big two-panel readout: your **heading + speed** with the **wind** on the left, and a
+  bold **arrow + heading + distance (yards)** to the next mark on the right. Heading-up, so the arrow points
+  exactly where to steer.
 - 🧭 **Live map** with your boat, heading, speed (SOG/COG) and breadcrumb track
 - ➡️ **Next-mark guidance** — bearing, distance, and which way to steer
 - 💨 Enter the wind and get **point of sail, laylines, and the fastest route** (with tack/gybe points) drawn on the map

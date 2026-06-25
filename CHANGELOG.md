@@ -126,6 +126,17 @@ which is bumped on every deploy so phones pull the new build.
   heading table, next-mark guidance, route, laylines, and race timer. W/L laps go leeward → windward
   directly (no start rounding between laps). **Custom Race is unchanged.**
 
+### v55 — Race View
+- New **Race View** button (first on the map row) — a big two-column readout that **replaces the map**
+  for at-a-glance steering. **Left:** your boat (fixed pointing up), **heading** on top, **SOG** below, plus a
+  **green arrow** showing where the **wind comes from**. **Right:** a bold **black arrow** to the next mark,
+  the **desired heading** on top, and **distance** (nm + yards) below.
+- **Heading-up** orientation: arrows point to where the wind and mark are **relative to your bow**
+  (mark to your right → arrow points right). Falls back to compass-up until there's a heading.
+- Tap **Locate / Course / Both** to return to the map.
+- Section order tidied: **Race timer** now sits below **Start line & timer**; **Next mark** stays just
+  above the course map.
+
 ---
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
