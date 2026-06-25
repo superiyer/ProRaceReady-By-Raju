@@ -1408,6 +1408,15 @@ function rvArrow(rot, color, o){
     `<path d="M50,${tipY.toFixed(1)} L${(50-w).toFixed(1)},${baseY.toFixed(1)} L${(50+w).toFixed(1)},${baseY.toFixed(1)} Z" fill="${color}"/></g>`;
 }
 
+/* thin wind arrow: tail on the rim in the wind-FROM direction, arrowhead pointing
+   inward toward the boat at the centre. rot = wind-from bearing relative to the bow. */
+function rvWindArrow(rot){
+  const c="#22c55e", rimY=50-44, baseY=50-26, tipY=50-17, w=4.5;
+  return `<g transform="rotate(${rot.toFixed(1)} 50 50)">`+
+    `<line x1="50" y1="${rimY}" x2="50" y2="${baseY}" stroke="${c}" stroke-width="2.6" stroke-linecap="round"/>`+
+    `<path d="M50,${tipY} L${(50-w).toFixed(1)},${baseY} L${(50+w).toFixed(1)},${baseY} Z" fill="${c}"/></g>`;
+}
+
 function renderRaceView(){
   const host = $("raceView"); if(!host) return;
   const norm = x => ((x%360)+360)%360;
@@ -1427,18 +1436,18 @@ function renderRaceView(){
     if(hasGps){ mrkBrg = norm(bearingMag(geo.lastPos, ACTIVE_MARKS[tgt])); distnm = distNm(geo.lastPos, ACTIVE_MARKS[tgt]); }
   }
 
-  // left: boat fixed pointing up + green arrow showing where the wind comes FROM
+  // left: boat fixed pointing up; thin green wind arrow starts on the circle where the
+  // wind comes FROM and points inward toward the boat (drawn on top so it stays visible).
   let gBoat = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
     `<circle cx="50" cy="50" r="46" fill="none" stroke="#274034" stroke-width="2"/>`;
-  if(windFrom != null) gBoat += rvArrow(norm(windFrom - effHdg), "#22c55e", {tipR:46, headLen:13, w:7, sw:5, tailR:6});
-  // sailboat seen from above, bow up: sharp bow at the top, flat transom (stern) at the
-  // bottom, mast + mainsail + jib — so the heading direction is unmistakable.
-  gBoat += `<path d="M50,14 C58,25 61,39 60,54 C59,66 57,76 54,83 L46,83 C43,76 41,66 40,54 C39,39 42,25 50,14 Z" fill="#eef3f8" stroke="#0b1220" stroke-width="1.8" stroke-linejoin="round"/>`+
-           `<line x1="46" y1="83" x2="54" y2="83" stroke="#0b1220" stroke-width="2.6"/>`+              /* transom / stern */
-           `<path d="M50,40 L50,78 C66,69 66,50 50,40 Z" fill="#ffffff" stroke="#0b1220" stroke-width="1" stroke-linejoin="round"/>`+   /* mainsail */
-           `<path d="M50,18 L50,39 C60,33 59,24 50,18 Z" fill="#e7eef6" stroke="#0b1220" stroke-width="0.9" stroke-linejoin="round"/>`+ /* jib */
-           `<circle cx="50" cy="40" r="2.2" fill="#0b1220"/>`+                                          /* mast */
-           `</svg>`;
+  // points-of-sail style boat seen from above, bow up: pointed bow, rounded stern, with
+  // the jib drawn as a curved line forward and the mainsail as a straight line aft.
+  gBoat += `<path d="M50,13 C61,28 64,52 57,76 C54,85 46,85 43,76 C36,52 39,28 50,13 Z" fill="#eef3f8" stroke="#0b1220" stroke-width="1.8" stroke-linejoin="round"/>`+
+           `<circle cx="50" cy="36" r="2.1" fill="#0b1220"/>`+                                                    /* mast */
+           `<path d="M50,17 Q61,27 51,35" fill="none" stroke="#0b1220" stroke-width="2.4" stroke-linecap="round"/>`+   /* jib (curved) */
+           `<line x1="50" y1="36" x2="57" y2="70" stroke="#0b1220" stroke-width="2.6" stroke-linecap="round"/>`;     /* mainsail (straight) */
+  if(windFrom != null) gBoat += rvWindArrow(norm(windFrom - effHdg));
+  gBoat += `</svg>`;
 
   // right: bold black arrow to the next mark (relative to heading)
   let gMark = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
