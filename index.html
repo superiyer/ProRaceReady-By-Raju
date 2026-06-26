@@ -436,11 +436,12 @@
   .rv2Panel.boat{background:#0e1f16;}
   .rv2Panel.mark{background:#13243d; border-top:2px solid #25324a;}
   .rv2Gfx{position:relative; z-index:1;}
-  .rv2Gfx svg{display:block; width:min(92vw,40vh); height:min(92vw,40vh);}
+  .rv2Gfx svg{display:block; width:min(86vw,37vh); height:min(86vw,37vh);}
   .rv2Cell{position:absolute; z-index:2; display:flex; flex-direction:column; line-height:1; pointer-events:none;}
   .rv2Cell .l{font-size:11px; font-weight:800; letter-spacing:.06em; color:#9fb3d0; text-transform:uppercase; margin-bottom:4px;}
   .rv2Cell .v{font-size:clamp(22px,7vw,40px); font-weight:900; color:#fff; font-variant-numeric:tabular-nums;}
   .rv2Cell .v small{font-size:.42em; font-weight:800; color:#9fb3d0; letter-spacing:.03em; vertical-align:super;}
+  .rv2Cell .v .rv2Mark{font-size:1.5em; font-weight:900; color:#ffd54a;}
   .boat .rv2Cell .l{color:#7fd6a3;}
   .rv2Cell.tl{top:10px; left:12px; align-items:flex-start; text-align:left;}
   .rv2Cell.tr{top:10px; right:12px; align-items:flex-end; text-align:right;}
@@ -1578,11 +1579,12 @@ function rvBoatSvg(d){
 /* heading-up mark compass: bow is 'up' and the rose turns with your heading, just like the
    boat circle. The arrow leans off straight-up by exactly your steering error, so arrow up =
    dead on the mark. Goes green when you're within 5 degrees. */
-function rvMarkSvg(d){
+function rvMarkSvg(d, arrowOpts){
+  const ao = arrowOpts || {tipR:43, headLen:19, w:11, sw:8};
   let g = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
     `<circle cx="50" cy="50" r="46" fill="none" stroke="#2a3a55" stroke-width="2"/>`+
     rvCompass(d.effHdg);
-  if(d.hasGps && d.mrkBrg != null) g += rvArrow(d.norm(d.mrkBrg - d.effHdg), d.onCourse ? "#34d36b" : "#ffd54a", {tipR:43, headLen:19, w:11, sw:8});
+  if(d.hasGps && d.mrkBrg != null) g += rvArrow(d.norm(d.mrkBrg - d.effHdg), d.onCourse ? "#34d36b" : "#ffd54a", ao);
   return g + `<circle cx="50" cy="50" r="4" fill="#fff"/></svg>`;
 }
 
@@ -1645,7 +1647,8 @@ function renderRaceView2(){
   const windV = d.windFrom!=null ? `${hdg3(d.windFrom)}${sm("&deg;M")}` : "&mdash;";
   const brgV = d.mrkBrg!=null ? `${hdg3(d.mrkBrg)}${sm("&deg;M")}` : "&mdash;";
   const nmV = d.distnm!=null ? `${d.distnm.toFixed(2)}${sm("NM")}` : "&mdash;";
-  const ydV = d.distnm!=null ? `${Math.round(d.distnm*2025.37).toLocaleString()}${sm("YD")}` : "&mdash;";
+  const ydV = d.distnm!=null ? `${Math.round(d.distnm*2025.37).toLocaleString()}${sm("YDS")}` : "&mdash;";
+  const markV = `<span class="rv2Mark">${d.markLbl || "&mdash;"}</span>`;
   const note = rvNote(d);
   const cell = (pos,lbl,val)=>`<div class="rv2Cell ${pos}"><span class="l">${lbl}</span><span class="v">${val}</span></div>`;
 
@@ -1657,10 +1660,11 @@ function renderRaceView2(){
       `<div class="rv2Gfx">${rvBoatSvg(d)}</div>`+
     `</div>`+
     `<div class="rv2Panel mark">`+
-      cell("tl",`Brg to ${d.markLbl || "mark"}`,brgV)+
-      cell("tr","Distance",nmV)+
-      cell("bl","Yards",ydV)+
-      `<div class="rv2Gfx">${rvMarkSvg(d)}</div>`+
+      cell("tl","Heading",brgV)+
+      cell("tr","Next mark",markV)+
+      cell("bl","Distance",nmV)+
+      cell("br","Distance",ydV)+
+      `<div class="rv2Gfx">${rvMarkSvg(d, {tipR:43, headLen:16, w:7, sw:5})}</div>`+
     `</div>`+
     rvSteerHtml(d, "rv2Steer") +
     (note ? `<div class="rv2Note">${note}</div>` : "");

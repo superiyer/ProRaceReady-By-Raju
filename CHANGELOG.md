@@ -126,6 +126,12 @@ which is bumped on every deploy so phones pull the new build.
   heading table, next-mark guidance, route, laylines, and race timer. W/L laps go leeward → windward
   directly (no start rounding between laps). **Custom Race is unchanged.**
 
+### v66 — Race View 2 polish
+- **Thinner** mark arrow on the bottom (mark) compass.
+- Mark panel readouts re-arranged: **Heading** (bearing) top-left, the **next mark letter big** top-right,
+  and **distance** along the bottom — **NM** bottom-left, **YDS** bottom-right.
+- Compasses made **slightly smaller** for a touch more breathing room.
+
 ### v65 — Icon controls + stacked Race View
 - The map control row is now **all icons**: **race car** (Race view), **F1 car** (Race view 2),
   **locate**, **sailboat** (Course), **camera drone** (Both), and a **cancel ⊗** (Clear). Icons are
