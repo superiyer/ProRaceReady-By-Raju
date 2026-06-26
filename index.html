@@ -404,7 +404,7 @@
        color:#fff; text-align:center;}
   .tactics .tacLay.stbd{background:var(--ok);} .tactics .tacLay.port{background:var(--cm);}
   .tactics .tacMuted{color:var(--muted); font-size:14px; font-weight:600;}
-  .mapCtrl{display:flex; gap:8px; margin:6px 2px 0;}
+  .mapCtrl{display:flex; flex-wrap:wrap; gap:8px; margin:6px 2px 0;}
   .mapCtrl button{appearance:none; border:2px solid var(--ink); background:#fff; color:var(--ink);
        border-radius:8px; padding:9px 14px; font-size:14px; font-weight:700; cursor:pointer;}
   .mapCtrl button.on{background:var(--accent); border-color:var(--accent); color:#fff;}
@@ -429,6 +429,27 @@
   .rvSteer{grid-column:1 / -1; text-align:center; padding:9px 10px; font-size:clamp(20px,6.5vw,32px);
        font-weight:900; letter-spacing:.02em; border-top:2px solid #25324a;}
   .rvSteer.on{color:#34d36b;} .rvSteer.turn{color:#ffd54a;}
+  /* Race View 2 — two BIG compasses stacked top/bottom, data points in the dead corners */
+  .raceView2{margin-top:6px; border:2px solid var(--ink); border-radius:14px; overflow:hidden;
+       display:flex; flex-direction:column; background:#0b1220;}
+  .rv2Panel{position:relative; display:flex; align-items:center; justify-content:center; padding:6px 4px;}
+  .rv2Panel.boat{background:#0e1f16;}
+  .rv2Panel.mark{background:#13243d; border-top:2px solid #25324a;}
+  .rv2Gfx{position:relative; z-index:1;}
+  .rv2Gfx svg{display:block; width:min(92vw,40vh); height:min(92vw,40vh);}
+  .rv2Cell{position:absolute; z-index:2; display:flex; flex-direction:column; line-height:1; pointer-events:none;}
+  .rv2Cell .l{font-size:11px; font-weight:800; letter-spacing:.06em; color:#9fb3d0; text-transform:uppercase; margin-bottom:4px;}
+  .rv2Cell .v{font-size:clamp(22px,7vw,40px); font-weight:900; color:#fff; font-variant-numeric:tabular-nums;}
+  .rv2Cell .v small{font-size:.42em; font-weight:800; color:#9fb3d0; letter-spacing:.03em; vertical-align:super;}
+  .boat .rv2Cell .l{color:#7fd6a3;}
+  .rv2Cell.tl{top:10px; left:12px; align-items:flex-start; text-align:left;}
+  .rv2Cell.tr{top:10px; right:12px; align-items:flex-end; text-align:right;}
+  .rv2Cell.bl{bottom:10px; left:12px; align-items:flex-start; text-align:left;}
+  .rv2Cell.br{bottom:10px; right:12px; align-items:flex-end; text-align:right;}
+  .rv2Steer{text-align:center; padding:8px 10px; font-size:clamp(18px,6vw,30px);
+       font-weight:900; letter-spacing:.02em; border-top:2px solid #25324a;}
+  .rv2Steer.on{color:#34d36b;} .rv2Steer.turn{color:#ffd54a;}
+  .rv2Note{text-align:center; padding:6px 10px 9px; color:#ffd54a; font-size:12.5px; font-weight:700;}
   .boatlbl{font:700 11px -apple-system,"Segoe UI",sans-serif;}
   tr.activeLeg td{background:#eaf2ff;}
   tr.activeLeg td.fromto{box-shadow:inset 4px 0 0 var(--accent);}
@@ -710,7 +731,31 @@
       </div>
 
       <div class="mapCtrl">
-        <button id="raceViewBtn" onclick="toggleRaceView()">Race</button>
+        <button id="raceViewBtn" class="iconBtn" onclick="toggleRaceView()" title="Race view (side by side)" aria-label="Race view">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 13.6l1.7-.3 1.9-2.4a3 3 0 0 1 2.3-1.1h3.7a3.5 3.5 0 0 1 2.3.9l2.1 1.8 1.8.4a1 1 0 0 1 .8 1v1a.7.7 0 0 1-.7.7h-1.3"/>
+              <path d="M5.7 15.6H3.7a.7.7 0 0 1-.7-.7v-1.3"/>
+              <line x1="9.5" y1="15.6" x2="15" y2="15.6"/>
+              <circle cx="7.5" cy="15.7" r="1.9"/>
+              <circle cx="16.9" cy="15.7" r="1.9"/>
+            </g>
+          </svg>
+        </button>
+        <button id="raceView2Btn" class="iconBtn" onclick="toggleRaceView2()" title="Race view (stacked compasses)" aria-label="Race view stacked">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2.6c1.2 0 1.6 1.5 1.6 3.1v8.6c0 2-.4 4.1-1.6 5.1-1.2-1-1.6-3.1-1.6-5.1V5.7c0-1.6.4-3.1 1.6-3.1z"/>
+              <line x1="8.2" y1="3.4" x2="15.8" y2="3.4"/>
+              <line x1="8.7" y1="20.6" x2="15.3" y2="20.6"/>
+              <rect x="6.2" y="6" width="2.5" height="3.4" rx=".6"/>
+              <rect x="15.3" y="6" width="2.5" height="3.4" rx=".6"/>
+              <rect x="6.2" y="14" width="2.5" height="3.4" rx=".6"/>
+              <rect x="15.3" y="14" width="2.5" height="3.4" rx=".6"/>
+              <circle cx="12" cy="10.6" r="1.3"/>
+            </g>
+          </svg>
+        </button>
         <button id="zoomBtn" class="iconBtn" onclick="zoomToBoat()" title="Zoom to boat" aria-label="Zoom to boat">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
             <circle cx="12" cy="12" r="6.4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -721,12 +766,43 @@
             <line x1="19"  y1="12" x2="22.5" y2="12" stroke="currentColor" stroke-width="2"/>
           </svg>
         </button>
-        <button id="courseBtn" class="on" onclick="fitCourse()">Course</button>
-        <button id="bothBtn" onclick="fitBoth()">Both</button>
-        <button onclick="clearTrack()">Clear</button>
+        <button id="courseBtn" class="iconBtn on" onclick="fitCourse()" title="Fit course" aria-label="Fit course">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="3" x2="12" y2="16"/>
+              <path d="M12 4.5c2.6 1.4 4.5 3.7 5.6 6.7H12z"/>
+              <path d="M12 6.6C10.4 7.8 9.2 9.5 8.4 11.2H12z"/>
+              <path d="M5 16.5h14l-1.8 3.2a1.2 1.2 0 0 1-1 .6H7.8a1.2 1.2 0 0 1-1-.6z"/>
+            </g>
+          </svg>
+        </button>
+        <button id="bothBtn" class="iconBtn" onclick="fitBoth()" title="Fit boat + course" aria-label="Fit boat and course">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="6" height="5" rx="1.5"/>
+              <line x1="9.4" y1="9.3" x2="6.6" y2="6.5"/>
+              <line x1="14.6" y1="9.3" x2="17.4" y2="6.5"/>
+              <line x1="9.4" y1="13.7" x2="6.6" y2="16.5"/>
+              <line x1="14.6" y1="13.7" x2="17.4" y2="16.5"/>
+              <ellipse cx="5.4" cy="6.2" rx="2.5" ry="1"/>
+              <ellipse cx="18.6" cy="6.2" rx="2.5" ry="1"/>
+              <ellipse cx="5.4" cy="16.8" rx="2.5" ry="1"/>
+              <ellipse cx="18.6" cy="16.8" rx="2.5" ry="1"/>
+              <path d="M12 14v2"/>
+              <circle cx="12" cy="17.2" r="1.2"/>
+            </g>
+          </svg>
+        </button>
+        <button id="clearBtn" class="iconBtn" onclick="clearTrack()" title="Clear track" aria-label="Clear track">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M9 9l6 6M15 9l-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
       <div id="mapDiagram" class="mapDiagram"></div>
       <div id="raceView" class="raceView" style="display:none"></div>
+      <div id="raceView2" class="raceView2" style="display:none"></div>
 
       <div id="gpsOffNote" class="mapNote gpsOffNote" style="display:none">
         <b>GPS is off.</b> Seeing your boat needs GPS on <b>and</b> being near the course.
@@ -1030,7 +1106,8 @@ const geo = {
   watchId: null, lastPos: null, prev: null, sogKt: null, cogTrue: null,
   track: [], seqArr: [], targetIdx: 1, manual: false, fit: "course",
   view: null,   // manual pinch/pan viewBox {x,y,w,h} in diagram units, or null = whole course
-  raceView: false,   // Race View (two-column heading/distance readout) replaces the map
+  raceView: false,   // Race View 1 (two-column side-by-side heading/distance readout) replaces the map
+  raceView2: false,  // Race View 2 (stacked top/bottom big compasses) replaces the map
   lineRC: null, linePin: null,   // start-line ends pinged by GPS ("ping the line")
 };
 const ROUND_NM = 0.027;   // ~50 m: within this of the target mark => advance to next leg
@@ -1382,7 +1459,7 @@ function buildRouteSvg(K){
 
 /* redraw the live map (boat, track, route, etc.) — full re-render keeps symbols
    a constant on-screen size at the current zoom. */
-function drawBoatOverlay(){ if(geo.raceView) renderRaceView(); else renderMap(); }
+function drawBoatOverlay(){ if(geo.raceView) renderRaceView(); else if(geo.raceView2) renderRaceView2(); else renderMap(); }
 
 /* ---------- Race View: big two-column heading + distance-to-mark readout ----------
    Replaces the map area. Heading-up: the boat is fixed pointing up and the wind/mark
@@ -1391,13 +1468,29 @@ function toggleRaceView(){
   setRaceView(!geo.raceView);
   track("race_view", { detail: geo.raceView ? "on" : "off" });
 }
+function toggleRaceView2(){
+  setRaceView2(!geo.raceView2);
+  track("race_view2", { detail: geo.raceView2 ? "on" : "off" });
+}
+/* show/hide the map vs. either race-view host to match the current geo flags */
+function syncRaceViews(){
+  const rv = $("raceView"), rv2 = $("raceView2"), md = $("mapDiagram");
+  if(rv)  rv.style.display  = geo.raceView  ? "grid" : "none";
+  if(rv2) rv2.style.display = geo.raceView2 ? "flex" : "none";
+  if(md)  md.style.display  = (geo.raceView || geo.raceView2) ? "none" : "block";
+  if(geo.raceView || geo.raceView2){ ["gpsOffNote","offGrid"].forEach(id=>{ const e=$(id); if(e) e.style.display="none"; }); }
+}
 function setRaceView(on){
   geo.raceView = on;
-  const rv = $("raceView"), md = $("mapDiagram");
-  if(rv) rv.style.display = on ? "grid" : "none";
-  if(md) md.style.display = on ? "none" : "block";
-  if(on){ ["gpsOffNote","offGrid"].forEach(id=>{ const e=$(id); if(e) e.style.display="none"; }); }
+  if(on) geo.raceView2 = false;          // the two race views are mutually exclusive
+  syncRaceViews();
   if(on) renderRaceView(); else { updateZoomBtn(); renderMap(); }
+}
+function setRaceView2(on){
+  geo.raceView2 = on;
+  if(on) geo.raceView = false;
+  syncRaceViews();
+  if(on) renderRaceView2(); else { updateZoomBtn(); renderMap(); }
 }
 
 /* vertical arrow from the centre, rotated clockwise by rot degrees (0 = pointing up) */
@@ -1448,8 +1541,8 @@ function rvCompass(rot){
   return s;
 }
 
-function renderRaceView(){
-  const host = $("raceView"); if(!host) return;
+/* shared computation for both Race Views — heading, speed, wind, next mark, steering */
+function raceViewData(){
   const norm = x => ((x%360)+360)%360;
   const hasGps = !!geo.lastPos;
   const hasHdg = geo.cogTrue != null;
@@ -1457,7 +1550,6 @@ function renderRaceView(){
   const effHdg = hasHdg ? hdg : 0;                       // north-up fallback before there's a heading
   const sog = geo.sogKt;
   const windFrom = getWind();
-
   // next mark — the same target the guidance panel is steering toward
   const seq = geo.seqArr || [];
   let markLbl=null, mrkBrg=null, distnm=null;
@@ -1466,65 +1558,112 @@ function renderRaceView(){
     markLbl = tgt;
     if(hasGps){ mrkBrg = norm(bearingMag(geo.lastPos, ACTIVE_MARKS[tgt])); distnm = distNm(geo.lastPos, ACTIVE_MARKS[tgt]); }
   }
-
-  // left: heading-up boat compass — boat fixed pointing up, the magnetic rose rotates so
-  // your heading sits at the top; thin green wind arrow points to where the wind comes FROM.
-  let gBoat = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
-    `<circle cx="50" cy="50" r="46" fill="none" stroke="#2c4a3a" stroke-width="2"/>`+
-    rvCompass(effHdg);
-  // simple boat hull seen from above, bow up: pointed bow, rounded stern (no sails).
-  gBoat += `<path d="M50,18.5 C59.4,31.3 61.9,51.7 56,72.1 C53.4,79.8 46.6,79.8 44,72.1 C38.1,51.7 40.6,31.3 50,18.5 Z" fill="#eef3f8" stroke="#0b1220" stroke-width="1.8" stroke-linejoin="round"/>`;
-  if(windFrom != null) gBoat += rvWindArrow(norm(windFrom - effHdg));
-  gBoat += `</svg>`;
-
-  // right: heading-up mark compass — bow is 'up' and the rose turns with your heading, just
-  // like the boat circle. The arrow leans off straight-up by exactly your steering error, so
-  // arrow up = dead on the mark. Goes green when you're within 5 degrees.
   const steer = (hasHdg && mrkBrg != null) ? angleDiff(effHdg, mrkBrg) : null;   // + = mark to starboard
   const onCourse = steer != null && Math.abs(steer) <= 5;
-  let gMark = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
+  return { norm, hasGps, hasHdg, hdg, effHdg, sog, windFrom, markLbl, mrkBrg, distnm, steer, onCourse };
+}
+
+/* heading-up boat compass: boat fixed pointing up, the magnetic rose rotates so your heading
+   sits at the top; thin green wind arrow points to where the wind comes FROM. */
+function rvBoatSvg(d){
+  let g = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
+    `<circle cx="50" cy="50" r="46" fill="none" stroke="#2c4a3a" stroke-width="2"/>`+
+    rvCompass(d.effHdg)+
+    // simple boat hull seen from above, bow up: pointed bow, rounded stern (no sails).
+    `<path d="M50,18.5 C59.4,31.3 61.9,51.7 56,72.1 C53.4,79.8 46.6,79.8 44,72.1 C38.1,51.7 40.6,31.3 50,18.5 Z" fill="#eef3f8" stroke="#0b1220" stroke-width="1.8" stroke-linejoin="round"/>`;
+  if(d.windFrom != null) g += rvWindArrow(d.norm(d.windFrom - d.effHdg));
+  return g + `</svg>`;
+}
+
+/* heading-up mark compass: bow is 'up' and the rose turns with your heading, just like the
+   boat circle. The arrow leans off straight-up by exactly your steering error, so arrow up =
+   dead on the mark. Goes green when you're within 5 degrees. */
+function rvMarkSvg(d){
+  let g = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">`+
     `<circle cx="50" cy="50" r="46" fill="none" stroke="#2a3a55" stroke-width="2"/>`+
-    rvCompass(effHdg);
-  if(hasGps && mrkBrg != null) gMark += rvArrow(norm(mrkBrg - effHdg), onCourse ? "#34d36b" : "#ffd54a", {tipR:43, headLen:19, w:11, sw:8});
-  gMark += `<circle cx="50" cy="50" r="4" fill="#fff"/></svg>`;
+    rvCompass(d.effHdg);
+  if(d.hasGps && d.mrkBrg != null) g += rvArrow(d.norm(d.mrkBrg - d.effHdg), d.onCourse ? "#34d36b" : "#ffd54a", {tipR:43, headLen:19, w:11, sw:8});
+  return g + `<circle cx="50" cy="50" r="4" fill="#fff"/></svg>`;
+}
 
-  const hdgTxt = hasHdg ? `${hdg3(hdg)}<span class="rvDeg">&deg;M</span>` : `&mdash;`;
-  const sogTxt = sog!=null ? `${sog.toFixed(1)} <small>KNOTS&nbsp;SOG</small>` : `&mdash; <small>SOG</small>`;
-  const brgTxt = mrkBrg!=null ? `${hdg3(mrkBrg)}<span class="rvDeg">&deg;M</span>` : `&mdash;`;
-  const yd = distnm!=null ? Math.round(distnm*2025.37) : null;
+/* steering cue banner shared by both views (cls = base class: "rvSteer" or "rv2Steer") */
+function rvSteerHtml(d, cls){
+  if(d.steer == null) return "";
+  const ad = Math.abs(Math.round(d.steer));
+  if(d.onCourse) return `<div class="${cls} on">&#9650; ON COURSE</div>`;
+  if(d.steer > 0) return `<div class="${cls} turn">STEER RIGHT ${ad}&deg; &#9654;</div>`;
+  return `<div class="${cls} turn">&#9664; STEER LEFT ${ad}&deg;</div>`;
+}
+
+function rvNote(d){
+  if(!d.hasGps) return "Start GPS (top-right) to point to the mark and read distance.";
+  if(!d.hasHdg) return "Move a little to get a heading &mdash; the compasses show north-up until then.";
+  return "";
+}
+
+/* Race View 1 — two compasses side by side, each with its big number above/below. */
+function renderRaceView(){
+  const host = $("raceView"); if(!host) return;
+  const d = raceViewData();
+  const hdgTxt = d.hasHdg ? `${hdg3(d.hdg)}<span class="rvDeg">&deg;M</span>` : `&mdash;`;
+  const sogTxt = d.sog!=null ? `${d.sog.toFixed(1)} <small>KNOTS&nbsp;SOG</small>` : `&mdash; <small>SOG</small>`;
+  const brgTxt = d.mrkBrg!=null ? `${hdg3(d.mrkBrg)}<span class="rvDeg">&deg;M</span>` : `&mdash;`;
+  const yd = d.distnm!=null ? Math.round(d.distnm*2025.37) : null;
   // mirror the SOG footer: big nm number (aligns with SOG), yards on the small second line
-  const distHtml = distnm!=null
-    ? `${distnm.toFixed(2)} <span class="rvU">NM</span><small>${yd.toLocaleString()}&nbsp;YARDS</small>`
+  const distHtml = d.distnm!=null
+    ? `${d.distnm.toFixed(2)} <span class="rvU">NM</span><small>${yd.toLocaleString()}&nbsp;YARDS</small>`
     : `&mdash; <small>DISTANCE</small>`;
-
-  // steering cue spanning both columns: how far / which way to turn onto the mark
-  let steerHtml = "";
-  if(steer != null){
-    const ad = Math.abs(Math.round(steer));
-    if(onCourse) steerHtml = `<div class="rvSteer on">&#9650; ON COURSE</div>`;
-    else if(steer > 0) steerHtml = `<div class="rvSteer turn">STEER RIGHT ${ad}&deg; &#9654;</div>`;
-    else steerHtml = `<div class="rvSteer turn">&#9664; STEER LEFT ${ad}&deg;</div>`;
-  }
-
-  let note = "";
-  if(!hasGps) note = "Start GPS (top-right) to point to the mark and read distance.";
-  else if(!hasHdg) note = "Move a little to get a heading &mdash; the compasses show north-up until then.";
+  const note = rvNote(d);
 
   host.innerHTML =
     `<div class="rvCol rvBoat">`+
       `<div class="rvLbl">Your heading</div>`+
       `<div class="rvBig">${hdgTxt}</div>`+
-      `<div class="rvGfx">${gBoat}</div>`+
+      `<div class="rvGfx">${rvBoatSvg(d)}</div>`+
       `<div class="rvSub">${sogTxt}</div>`+
     `</div>`+
     `<div class="rvCol rvMark">`+
-      `<div class="rvLbl">To mark ${markLbl || "&mdash;"}</div>`+
+      `<div class="rvLbl">To mark ${d.markLbl || "&mdash;"}</div>`+
       `<div class="rvBig">${brgTxt}</div>`+
-      `<div class="rvGfx">${gMark}</div>`+
+      `<div class="rvGfx">${rvMarkSvg(d)}</div>`+
       `<div class="rvSub">${distHtml}</div>`+
     `</div>`+
-    steerHtml +
+    rvSteerHtml(d, "rvSteer") +
     (note ? `<div class="rvNote">${note}</div>` : "");
+  updateZoomBtn();
+}
+
+/* Race View 2 — the same data, but the two big compasses are stacked top (boat) / bottom
+   (mark) so each can be as large as possible, with the readouts tucked into the dead corners
+   around the circles. */
+function renderRaceView2(){
+  const host = $("raceView2"); if(!host) return;
+  const d = raceViewData();
+  const sm = (lbl)=>`<small>${lbl}</small>`;
+  const hdgV = d.hasHdg ? `${hdg3(d.hdg)}${sm("&deg;M")}` : "&mdash;";
+  const sogV = d.sog!=null ? `${d.sog.toFixed(1)}${sm("KN")}` : "&mdash;";
+  const windV = d.windFrom!=null ? `${hdg3(d.windFrom)}${sm("&deg;M")}` : "&mdash;";
+  const brgV = d.mrkBrg!=null ? `${hdg3(d.mrkBrg)}${sm("&deg;M")}` : "&mdash;";
+  const nmV = d.distnm!=null ? `${d.distnm.toFixed(2)}${sm("NM")}` : "&mdash;";
+  const ydV = d.distnm!=null ? `${Math.round(d.distnm*2025.37).toLocaleString()}${sm("YD")}` : "&mdash;";
+  const note = rvNote(d);
+  const cell = (pos,lbl,val)=>`<div class="rv2Cell ${pos}"><span class="l">${lbl}</span><span class="v">${val}</span></div>`;
+
+  host.innerHTML =
+    `<div class="rv2Panel boat">`+
+      cell("tl","Heading",hdgV)+
+      cell("tr","SOG",sogV)+
+      cell("bl","Wind from",windV)+
+      `<div class="rv2Gfx">${rvBoatSvg(d)}</div>`+
+    `</div>`+
+    `<div class="rv2Panel mark">`+
+      cell("tl",`Brg to ${d.markLbl || "mark"}`,brgV)+
+      cell("tr","Distance",nmV)+
+      cell("bl","Yards",ydV)+
+      `<div class="rv2Gfx">${rvMarkSvg(d)}</div>`+
+    `</div>`+
+    rvSteerHtml(d, "rv2Steer") +
+    (note ? `<div class="rv2Note">${note}</div>` : "");
   updateZoomBtn();
 }
 
@@ -1583,21 +1722,20 @@ function setViewBoxOnly(vb){
 }
 
 function updateZoomBtn(){
-  const active = geo.raceView ? "" : (geo.view ? "" : geo.fit);   // race view / manual pan -> no fit button lit
+  const active = (geo.raceView || geo.raceView2) ? "" : (geo.view ? "" : geo.fit);   // race view / manual pan -> no fit button lit
   const set = (id, on)=>{ const b=$(id); if(b) b.classList.toggle("on", on); };
   set("raceViewBtn", geo.raceView);
+  set("raceView2Btn", geo.raceView2);
   set("zoomBtn", active === "boat");
   set("courseBtn", active === "course");
   set("bothBtn", active === "both");
 }
 
-/* leaving Race View just un-hides the map; the caller re-renders it */
+/* leaving either Race View just un-hides the map; the caller re-renders it */
 function exitRaceView(){
-  if(!geo.raceView) return;
-  geo.raceView = false;
-  const rv = $("raceView"), md = $("mapDiagram");
-  if(rv) rv.style.display = "none";
-  if(md) md.style.display = "block";
+  if(!geo.raceView && !geo.raceView2) return;
+  geo.raceView = false; geo.raceView2 = false;
+  syncRaceViews();
 }
 
 function zoomToBoat(){

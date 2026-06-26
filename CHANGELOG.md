@@ -126,6 +126,15 @@ which is bumped on every deploy so phones pull the new build.
   heading table, next-mark guidance, route, laylines, and race timer. W/L laps go leeward → windward
   directly (no start rounding between laps). **Custom Race is unchanged.**
 
+### v65 — Icon controls + stacked Race View
+- The map control row is now **all icons**: **race car** (Race view), **F1 car** (Race view 2),
+  **locate**, **sailboat** (Course), **camera drone** (Both), and a **cancel ⊗** (Clear). Icons are
+  inline SVG, so they stay sharp and work offline.
+- New **Race view 2** (second car icon) — the **same** heading / speed / wind / bearing / distance data
+  as Race view, but the two big compasses are **stacked top (boat) and bottom (mark)** instead of side by
+  side, so each rose is as **large as fits** on a phone. The readouts sit in the **corners around** each
+  circle, with the **STEER / ON COURSE** cue across the bottom.
+
 ### v55 — Race View
 - New **Race View** button (first on the map row) — a big two-column readout that **replaces the map**
   for at-a-glance steering. **Left:** your boat (fixed pointing up), **heading** on top, **SOG** below, plus a
