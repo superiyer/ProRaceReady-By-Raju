@@ -445,6 +445,7 @@
   .rv2Cell .v small{font-size:.42em; font-weight:800; color:#9fb3d0; letter-spacing:.03em; vertical-align:super;}
   .rv2Cell .v .rv2Mark{font-size:1.5em; font-weight:900; color:#ffd54a;}
   .boat .rv2Cell .l{color:#7fd6a3;}
+  .mark .rv2Cell .l{color:#ffd54a;}
   .rv2Cell.tl{top:10px; left:12px; align-items:flex-start; text-align:left;}
   .rv2Cell.tr{top:10px; right:12px; align-items:flex-end; text-align:right;}
   .rv2Cell.bl{bottom:10px; left:12px; align-items:flex-start; text-align:left;}
@@ -1662,7 +1663,7 @@ function renderRaceView2(){
   const windV = d.windFrom!=null ? `${hdg3(d.windFrom)}${sm("&deg;M")}` : "&mdash;";
   const brgV = d.mrkBrg!=null ? `${hdg3(d.mrkBrg)}${sm("&deg;M")}` : "&mdash;";
   const nmV = d.distnm!=null ? `${d.distnm.toFixed(2)}${sm("NM")}` : "&mdash;";
-  const ydV = d.distnm!=null ? `${Math.round(d.distnm*2025.37).toLocaleString()}${sm("YDS")}` : "&mdash;";
+  const ydV = d.distnm!=null ? `${Math.round(d.distnm*2025.37).toLocaleString()}${sm("YD")}` : "&mdash;";
   const markV = `<span class="rv2Mark">${d.markLbl || "&mdash;"}</span>`;
   const note = rvNote(d);
   const cell = (pos,lbl,val)=>`<div class="rv2Cell ${pos}"><span class="l">${lbl}</span><span class="v">${val}</span></div>`;
