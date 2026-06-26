@@ -1,5 +1,5 @@
 /* Pro Race Ready — offline cache. Bump CACHE version when files change. */
-const CACHE = "wnr-v71";
+const CACHE = "wnr-v72";
 const ASSETS = [
   "./",
   "./index.html",

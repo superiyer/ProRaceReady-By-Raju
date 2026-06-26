@@ -126,6 +126,12 @@ which is bumped on every deploy so phones pull the new build.
   heading table, next-mark guidance, route, laylines, and race timer. W/L laps go leeward → windward
   directly (no start rounding between laps). **Custom Race is unchanged.**
 
+### v72 — Approximate depth (Race View 2)
+- The boat compass's bottom-right corner now shows **≈ DEPTH** in feet at your location, from **NOAA
+  NCEI** global bathymetry (free, no key). Throttled (refetch after ~40 m moved, min 8 s apart).
+- **Important:** this is surveyed sea-floor depth vs a fixed datum — **approximate, not tide-corrected,
+  online-only** — a rough indicator, **not for navigation**. Shows "—" when offline.
+
 ### v71 — Faster updates
 - The page (HTML) is now fetched **network-first**: a single normal refresh shows new content when
   online, while the cached copy still loads instantly when offline. Static assets stay cache-first.

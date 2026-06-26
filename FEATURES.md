@@ -19,7 +19,9 @@ Created by Raju Venkatraman.
 - 🎛️ **Race View** — a big two-panel readout: your **heading + speed** with the **wind** on the left, and a
   bold **arrow + heading + distance (yards)** to the next mark on the right. Heading-up, so the arrow points
   exactly where to steer. A **second Race View** (F1-car icon) stacks the two compasses **top & bottom** so
-  each rose is as big as the phone allows, with the numbers tucked into the corners.
+  each rose is as big as the phone allows, with the numbers tucked into the corners — including an
+  **≈ approximate water depth** (NOAA bathymetry, feet) when you have a signal. *Rough indicator only,
+  not tide-corrected, not for navigation.*
 - 🧭 **Live map** with your boat, heading, speed (SOG/COG) and breadcrumb track
 - ➡️ **Next-mark guidance** — bearing, distance, and which way to steer
 - 💨 Enter the wind and get **point of sail, laylines, and the fastest route** (with tack/gybe points) drawn on the map

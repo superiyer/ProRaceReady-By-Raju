@@ -1126,6 +1126,7 @@ const geo = {
   raceView: false,   // Race View 1 (two-column side-by-side heading/distance readout) replaces the map
   raceView2: false,  // Race View 2 (stacked top/bottom big compasses) replaces the map
   lineRC: null, linePin: null,   // start-line ends pinged by GPS ("ping the line")
+  depthFt: null, depthPos: null, depthFetchAt: 0, depthBusy: false,   // approx NOAA bathymetry (Race View 2)
 };
 const ROUND_NM = 0.027;   // ~50 m: within this of the target mark => advance to next leg
 
@@ -1651,11 +1652,41 @@ function renderRaceView(){
   updateZoomBtn();
 }
 
+/* Approximate water depth at the current position from NOAA NCEI's global bathymetry DEM
+   (CORS-enabled, free, no key). This is surveyed sea-floor depth relative to a fixed datum,
+   NOT tide-corrected real-time depth, and it's online-only — a rough indicator, never for
+   navigation. Throttled: refetch only after moving ~40 m or, on failure, every 25 s; min 8 s
+   between calls. On success/failure it re-renders Race View 2 so the corner updates. */
+function maybeFetchDepth(){
+  if(!geo.lastPos || geo.depthBusy) return;
+  const now = Date.now();
+  const haveVal = geo.depthFt != null;
+  const moved = !geo.depthPos || distNm(geo.depthPos, geo.lastPos) > 0.022;   // ~40 m
+  if(haveVal && !moved) return;                       // value good, haven't moved -> keep it
+  if(!haveVal && (now - geo.depthFetchAt) < 25000) return;   // back off after a miss/error
+  if((now - geo.depthFetchAt) < 8000) return;         // never hammer faster than ~8 s
+  geo.depthBusy = true;
+  const pos = geo.lastPos;
+  const geom = encodeURIComponent(JSON.stringify({ x: pos.lon, y: pos.lat }));
+  const url = "https://gis.ngdc.noaa.gov/arcgis/rest/services/DEM_mosaics/DEM_global_mosaic/ImageServer/identify"+
+              "?geometry="+geom+"&geometryType=esriGeometryPoint&returnGeometry=false&f=json";
+  fetch(url).then(r=>r.json()).then(j=>{
+    const v = parseFloat(j && j.value);
+    geo.depthBusy = false; geo.depthFetchAt = Date.now(); geo.depthPos = pos;
+    geo.depthFt = (isFinite(v) && v < 0) ? (-v * 3.28084) : (isFinite(v) ? 0 : null);
+    if(geo.raceView2) renderRaceView2();
+  }).catch(()=>{
+    geo.depthBusy = false; geo.depthFetchAt = Date.now(); geo.depthFt = null;
+    if(geo.raceView2) renderRaceView2();
+  });
+}
+
 /* Race View 2 — the same data, but the two big compasses are stacked top (boat) / bottom
    (mark) so each can be as large as possible, with the readouts tucked into the dead corners
    around the circles. */
 function renderRaceView2(){
   const host = $("raceView2"); if(!host) return;
+  maybeFetchDepth();
   const d = raceViewData();
   const sm = (lbl)=>`<small>${lbl}</small>`;
   const hdgV = d.hasHdg ? `${hdg3(d.hdg)}${sm("&deg;M")}` : "&mdash;";
@@ -1665,7 +1696,10 @@ function renderRaceView2(){
   const nmV = d.distnm!=null ? `${d.distnm.toFixed(2)}${sm("NM")}` : "&mdash;";
   const ydV = d.distnm!=null ? `${Math.round(d.distnm*2025.37).toLocaleString()}${sm("YD")}` : "&mdash;";
   const markV = `<span class="rv2Mark">${d.markLbl || "&mdash;"}</span>`;
-  const note = rvNote(d);
+  const depthV = geo.depthFt!=null ? `${Math.round(geo.depthFt)}${sm("FT")}`
+               : (geo.depthBusy ? `&hellip;` : `&mdash;`);
+  let note = rvNote(d);
+  if(!note && geo.depthFt!=null) note = "Depth is approximate (not tide-corrected) &mdash; not for navigation.";
   const cell = (pos,lbl,val)=>`<div class="rv2Cell ${pos}"><span class="l">${lbl}</span><span class="v">${val}</span></div>`;
 
   host.innerHTML =
@@ -1673,6 +1707,7 @@ function renderRaceView2(){
       cell("tl","Boat heading",hdgV)+
       cell("tr","SOG",sogV)+
       cell("bl","Wind from",windV)+
+      cell("br","&asymp; Depth",depthV)+
       `<div class="rv2Gfx">${rvBoatSvg(d)}</div>`+
     `</div>`+
     `<div class="rv2Panel mark">`+
