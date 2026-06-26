@@ -126,6 +126,12 @@ which is bumped on every deploy so phones pull the new build.
   heading table, next-mark guidance, route, laylines, and race timer. W/L laps go leeward → windward
   directly (no start rounding between laps). **Custom Race is unchanged.**
 
+### v67 — Checkered-flag icons + Race View 2 sizing
+- Race buttons are now **checkered flags**: **one flag** for Race view, **two flags** for Race view 2.
+- Race View 2: mark arrow made **thinner** again; compass **letters nudged inward** so they clear the
+  tick notches; the **roses are a bit larger** (reclaiming the control-row height) and the **top numbers**
+  (heading, speed / heading, next mark) are **bigger**. Bottom distance numbers unchanged.
+
 ### v66 — Race View 2 polish
 - **Thinner** mark arrow on the bottom (mark) compass.
 - Mark panel readouts re-arranged: **Heading** (bearing) top-left, the **next mark letter big** top-right,

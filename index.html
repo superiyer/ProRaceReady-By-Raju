@@ -436,10 +436,12 @@
   .rv2Panel.boat{background:#0e1f16;}
   .rv2Panel.mark{background:#13243d; border-top:2px solid #25324a;}
   .rv2Gfx{position:relative; z-index:1;}
-  .rv2Gfx svg{display:block; width:min(86vw,37vh); height:min(86vw,37vh);}
+  .rv2Gfx svg{display:block; width:min(90vw,39vh); height:min(90vw,39vh);}
   .rv2Cell{position:absolute; z-index:2; display:flex; flex-direction:column; line-height:1; pointer-events:none;}
   .rv2Cell .l{font-size:11px; font-weight:800; letter-spacing:.06em; color:#9fb3d0; text-transform:uppercase; margin-bottom:4px;}
   .rv2Cell .v{font-size:clamp(22px,7vw,40px); font-weight:900; color:#fff; font-variant-numeric:tabular-nums;}
+  /* top data points (heading, SOG / heading, next mark) get the reclaimed height — bottom distances stay put */
+  .rv2Cell.tl .v, .rv2Cell.tr .v{font-size:clamp(27px,8.8vw,50px);}
   .rv2Cell .v small{font-size:.42em; font-weight:800; color:#9fb3d0; letter-spacing:.03em; vertical-align:super;}
   .rv2Cell .v .rv2Mark{font-size:1.5em; font-weight:900; color:#ffd54a;}
   .boat .rv2Cell .l{color:#7fd6a3;}
@@ -734,26 +736,39 @@
       <div class="mapCtrl">
         <button id="raceViewBtn" class="iconBtn" onclick="toggleRaceView()" title="Race view (side by side)" aria-label="Race view">
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 13.6l1.7-.3 1.9-2.4a3 3 0 0 1 2.3-1.1h3.7a3.5 3.5 0 0 1 2.3.9l2.1 1.8 1.8.4a1 1 0 0 1 .8 1v1a.7.7 0 0 1-.7.7h-1.3"/>
-              <path d="M5.7 15.6H3.7a.7.7 0 0 1-.7-.7v-1.3"/>
-              <line x1="9.5" y1="15.6" x2="15" y2="15.6"/>
-              <circle cx="7.5" cy="15.7" r="1.9"/>
-              <circle cx="16.9" cy="15.7" r="1.9"/>
+            <line x1="5" y1="3" x2="5" y2="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <rect x="5" y="3.5" width="14" height="9" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <g fill="currentColor">
+              <rect x="5"    y="3.5" width="3.5" height="3"/>
+              <rect x="12"   y="3.5" width="3.5" height="3"/>
+              <rect x="8.5"  y="6.5" width="3.5" height="3"/>
+              <rect x="15.5" y="6.5" width="3.5" height="3"/>
+              <rect x="5"    y="9.5" width="3.5" height="3"/>
+              <rect x="12"   y="9.5" width="3.5" height="3"/>
             </g>
           </svg>
         </button>
         <button id="raceView2Btn" class="iconBtn" onclick="toggleRaceView2()" title="Race view (stacked compasses)" aria-label="Race view stacked">
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2.6c1.2 0 1.6 1.5 1.6 3.1v8.6c0 2-.4 4.1-1.6 5.1-1.2-1-1.6-3.1-1.6-5.1V5.7c0-1.6.4-3.1 1.6-3.1z"/>
-              <line x1="8.2" y1="3.4" x2="15.8" y2="3.4"/>
-              <line x1="8.7" y1="20.6" x2="15.3" y2="20.6"/>
-              <rect x="6.2" y="6" width="2.5" height="3.4" rx=".6"/>
-              <rect x="15.3" y="6" width="2.5" height="3.4" rx=".6"/>
-              <rect x="6.2" y="14" width="2.5" height="3.4" rx=".6"/>
-              <rect x="15.3" y="14" width="2.5" height="3.4" rx=".6"/>
-              <circle cx="12" cy="10.6" r="1.3"/>
+            <line x1="13" y1="2.5" x2="13" y2="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <rect x="13" y="3" width="8" height="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+            <g fill="currentColor">
+              <rect x="13" y="3" width="2" height="2"/>
+              <rect x="17" y="3" width="2" height="2"/>
+              <rect x="15" y="5" width="2" height="2"/>
+              <rect x="19" y="5" width="2" height="2"/>
+              <rect x="13" y="7" width="2" height="2"/>
+              <rect x="17" y="7" width="2" height="2"/>
+            </g>
+            <line x1="3" y1="10" x2="3" y2="21.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <rect x="3" y="10.5" width="8" height="6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+            <g fill="currentColor">
+              <rect x="3" y="10.5" width="2" height="2"/>
+              <rect x="7" y="10.5" width="2" height="2"/>
+              <rect x="5" y="12.5" width="2" height="2"/>
+              <rect x="9" y="12.5" width="2" height="2"/>
+              <rect x="3" y="14.5" width="2" height="2"/>
+              <rect x="7" y="14.5" width="2" height="2"/>
             </g>
           </svg>
         </button>
@@ -1535,7 +1550,7 @@ function rvCompass(rot){
     const inr = pos(sb,46-len);
     s += `<line x1="${o.x.toFixed(1)}" y1="${o.y.toFixed(1)}" x2="${inr.x.toFixed(1)}" y2="${inr.y.toFixed(1)}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`;
     if(lab){
-      const isN = lab==="N", lp = pos(sb, t==="card"?38.5:39.5), fs = t==="card"?9:6.6;
+      const isN = lab==="N", lp = pos(sb, t==="card"?36:37), fs = t==="card"?9:6.6;
       s += `<text x="${lp.x.toFixed(1)}" y="${(lp.y+fs*0.35).toFixed(1)}" font-size="${fs}" font-weight="${isN?900:800}" text-anchor="middle" fill="${isN?"#ff5a4e":"#c2d0e2"}">${lab}</text>`;
     }
   }
@@ -1664,7 +1679,7 @@ function renderRaceView2(){
       cell("tr","Next mark",markV)+
       cell("bl","Distance",nmV)+
       cell("br","Distance",ydV)+
-      `<div class="rv2Gfx">${rvMarkSvg(d, {tipR:43, headLen:16, w:7, sw:5})}</div>`+
+      `<div class="rv2Gfx">${rvMarkSvg(d, {tipR:43, headLen:14, w:5, sw:3.5})}</div>`+
     `</div>`+
     rvSteerHtml(d, "rv2Steer") +
     (note ? `<div class="rv2Note">${note}</div>` : "");
