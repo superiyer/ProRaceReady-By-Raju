@@ -126,6 +126,10 @@ which is bumped on every deploy so phones pull the new build.
   heading table, next-mark guidance, route, laylines, and race timer. W/L laps go leeward → windward
   directly (no start rounding between laps). **Custom Race is unchanged.**
 
+### v73 — Drop the depth caveat line
+- Removed the always-on "depth is approximate" note under Race View 2; the **≈ DEPTH** label already
+  signals it's an estimate.
+
 ### v72 — Approximate depth (Race View 2)
 - The boat compass's bottom-right corner now shows **≈ DEPTH** in feet at your location, from **NOAA
   NCEI** global bathymetry (free, no key). Throttled (refetch after ~40 m moved, min 8 s apart).

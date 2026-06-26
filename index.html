@@ -1698,8 +1698,7 @@ function renderRaceView2(){
   const markV = `<span class="rv2Mark">${d.markLbl || "&mdash;"}</span>`;
   const depthV = geo.depthFt!=null ? `${Math.round(geo.depthFt)}${sm("FT")}`
                : (geo.depthBusy ? `&hellip;` : `&mdash;`);
-  let note = rvNote(d);
-  if(!note && geo.depthFt!=null) note = "Depth is approximate (not tide-corrected) &mdash; not for navigation.";
+  const note = rvNote(d);
   const cell = (pos,lbl,val)=>`<div class="rv2Cell ${pos}"><span class="l">${lbl}</span><span class="v">${val}</span></div>`;
 
   host.innerHTML =
