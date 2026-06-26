@@ -1,5 +1,5 @@
 /* Pro Race Ready — offline cache. Bump CACHE version when files change. */
-const CACHE = "wnr-v70";
+const CACHE = "wnr-v71";
 const ASSETS = [
   "./",
   "./index.html",
@@ -43,7 +43,24 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // everything else: cache-first (instant + offline), fall back to network
+  // the page itself (navigations + index.html): network-first so a single ordinary refresh
+  // shows new content, falling back to the cached copy only when offline.
+  const isHTML = req.mode === "navigate" ||
+                 url.pathname.endsWith("/") ||
+                 url.pathname.endsWith("/index.html") ||
+                 url.pathname.endsWith("index.html");
+  if (isHTML) {
+    e.respondWith(
+      fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put("./index.html", copy));
+        return res;
+      }).catch(() => caches.match(req, { ignoreSearch: true }).then((h) => h || caches.match("./index.html")))
+    );
+    return;
+  }
+
+  // everything else (icons, manifest, etc.): cache-first (instant + offline), fall back to network
   e.respondWith(
     caches.match(req, { ignoreSearch: true }).then(
       (hit) => hit || fetch(req).then((res) => {

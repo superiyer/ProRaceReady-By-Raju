@@ -126,6 +126,10 @@ which is bumped on every deploy so phones pull the new build.
   heading table, next-mark guidance, route, laylines, and race timer. W/L laps go leeward → windward
   directly (no start rounding between laps). **Custom Race is unchanged.**
 
+### v71 — Faster updates
+- The page (HTML) is now fetched **network-first**: a single normal refresh shows new content when
+  online, while the cached copy still loads instantly when offline. Static assets stay cache-first.
+
 ### v70 — Race View 2 heading labels
 - Top compass label is now **Boat heading**; bottom compass label is now **Mark heading**.
 
