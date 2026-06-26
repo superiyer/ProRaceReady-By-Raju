@@ -126,6 +126,9 @@ which is bumped on every deploy so phones pull the new build.
   heading table, next-mark guidance, route, laylines, and race timer. W/L laps go leeward → windward
   directly (no start rounding between laps). **Custom Race is unchanged.**
 
+### v70 — Race View 2 heading labels
+- Top compass label is now **Boat heading**; bottom compass label is now **Mark heading**.
+
 ### v69 — Race View 2 label tweaks
 - Bottom-right distance unit shortened to **YD**.
 - Bottom (mark) compass labels (Heading, Next mark, Distance) now **yellow** to match the mark arrow.
