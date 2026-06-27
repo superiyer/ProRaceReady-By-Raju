@@ -126,6 +126,10 @@ which is bumped on every deploy so phones pull the new build.
   heading table, next-mark guidance, route, laylines, and race timer. W/L laps go leeward → windward
   directly (no start rounding between laps). **Custom Race is unchanged.**
 
+### v75 — Dashed mark-rose wind arrow
+- The mark-compass wind arrow is now **thinner** and drawn as a **dashed** line (solid arrowhead) to
+  set it apart from the boat-compass wind arrow.
+
 ### v74 — Wind arrow on the mark rose
 - Added the green **wind-from arrow** to the bottom (mark) compass in Race View 2, drawn **thinner**
   than the one on the top (boat) compass.

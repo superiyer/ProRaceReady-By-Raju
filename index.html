@@ -1527,8 +1527,10 @@ function rvWindArrow(rot, o){
   o = o || {};
   const c="#22c55e", rimY=50-44, baseY=50-26, tipY=50-17;
   const sw = o.sw || 2, w = o.w || 3.6;
+  const dash = o.dash ? ` stroke-dasharray="${o.dash}"` : "";
+  const cap = o.dash ? "butt" : "round";
   return `<g transform="rotate(${rot.toFixed(1)} 50 50)">`+
-    `<line x1="50" y1="${rimY}" x2="50" y2="${baseY}" stroke="${c}" stroke-width="${sw}" stroke-linecap="round"/>`+
+    `<line x1="50" y1="${rimY}" x2="50" y2="${baseY}" stroke="${c}" stroke-width="${sw}" stroke-linecap="${cap}"${dash}/>`+
     `<path d="M50,${tipY} L${(50-w).toFixed(1)},${baseY} L${(50+w).toFixed(1)},${baseY} Z" fill="${c}"/></g>`;
 }
 
@@ -1717,7 +1719,7 @@ function renderRaceView2(){
       cell("tr","Next mark",markV)+
       cell("bl","Distance",nmV)+
       cell("br","Distance",ydV)+
-      `<div class="rv2Gfx">${rvMarkSvg(d, {tipR:43, headLen:14, w:5, sw:3.5}, {sw:1.3, w:2.5})}</div>`+
+      `<div class="rv2Gfx">${rvMarkSvg(d, {tipR:43, headLen:14, w:5, sw:3.5}, {sw:0.9, w:1.9, dash:"2.6 2"})}</div>`+
     `</div>`+
     rvSteerHtml(d, "rv2Steer") +
     (note ? `<div class="rv2Note">${note}</div>` : "");
