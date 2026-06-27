@@ -126,6 +126,10 @@ which is bumped on every deploy so phones pull the new build.
   heading table, next-mark guidance, route, laylines, and race timer. W/L laps go leeward → windward
   directly (no start rounding between laps). **Custom Race is unchanged.**
 
+### v74 — Wind arrow on the mark rose
+- Added the green **wind-from arrow** to the bottom (mark) compass in Race View 2, drawn **thinner**
+  than the one on the top (boat) compass.
+
 ### v73 — Drop the depth caveat line
 - Removed the always-on "depth is approximate" note under Race View 2; the **≈ DEPTH** label already
   signals it's an estimate.
